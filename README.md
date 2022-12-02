@@ -27,7 +27,7 @@ This function, based on the parameters set by `GCN::get_default()`, will execute
 
 ## How to use Colab
 1) From your *private copy of this repository*, open the `colab.ipynb` file in this folder and click on the "open in Colab" button
-2) Create a GihHub fine-grained personal access token just for this repository [link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (remember to give the right permission to the token in order to use it)
+2) Create a GitHub fine-grained personal access token just for this repository [link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (remember to give the right permission to the token in order to use it)
 3) Select the `GPU runtime` in Colab [link](https://www.geeksforgeeks.org/how-to-use-google-colab)
 4) Change the parameters accordingly with your account ID, clone repository name and token
 
