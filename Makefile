@@ -1,5 +1,7 @@
-CXX=gcc
-CXXFLAGS=-no-pie -O3 -g -pg -std=c++11 -Wall -Wno-sign-compare -Wno-unused-variable -Wno-unknown-pragmas
+#CXX=gcc
+CXX=nvcc
+#CXXFLAGS=-no-pie -O3 -g -pg -std=c++11 -Wall -Wno-sign-compare -Wno-unused-variable -Wno-unknown-pragmas
+CXXFLAGS=-O3 -std=c++11 -Wall -Wno-sign-compare -Wno-unused-variable -Wno-unknown-pragmas
 LDFLAGS=-lm -lstdc++
 
 CXXFILES=src/gcn.cpp src/optim.cpp src/module.cpp src/variable.cpp src/parser.cpp src/rand.cpp src/timer.cpp

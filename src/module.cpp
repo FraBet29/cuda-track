@@ -1,6 +1,7 @@
 #include "../include/module.h"
 #include "../include/rand.h"
 #include "../include/timer.h"
+#include "../include/cuda_check.h"
 #include <cmath>
 
 // ################################################################################################################
@@ -10,14 +11,68 @@
 Matmul::Matmul(Variable *a, Variable *b, Variable *c, int m, int n, int p) :
         a(a), b(b), c(c), m(m), n(n), p(p) {}
 
+__global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int n, int p) {
+    // Tile-based multiplication of matrices A and B; the result is stored in the matrix C
+    extern __shared__ float sblock[]; // sblock will contain the tile of A, followed by the tile of B
+    int i = threadIdx.x + blockIdx.x * blockDim.x; // index of the i-th row of C
+    int j = threadIdx.y + blockIdx.y * blockDim.y; // index of the j-th column of C
+    if (i < m && j < p)
+    {   
+        int tx = threadIdx.x;
+        int ty = threadIdx.y;
+        int dim = blockDim.x;
+        // Tile of A transfer from global to shared memory
+        for (std::size_t k = 0; k < n; k += dim) // slide horizontally through the tile of A by blocks of size (dim, dim)
+            sblock[tx * n + k + ty] = A[i * n + k + ty]; // sblock[tx][k + ty], A[i][k + ty]
+        // Tile of B transfer from global to shared memory (we must consider an offset of dim * n in sblock not to overwrite the memory occupied by the tile of A)
+        for (std::size_t k = 0; k < n; k += dim) // slide vertically through the tile of B by blocks of size (dim, dim)
+            sblock[dim * n + (k + tx) * dim + ty] = B[(k + tx) * p + j]; // sblock[k + tx][ty], B[k + tx][j]
+        __syncthreads();
+        int index = i * p + j;
+        C[index] = 0.0f;
+        for (std::size_t k = 0; k < n; ++k)
+            C[index] += sblock[tx * n + k] * sblock[dim * n + k * dim + ty]; // sblock[tx][k] * sblock[k][ty]
+    }
+}
+
 void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
     c->zero();
+    float *A, *B, *C;
+    // Allocation of the GPU global memory
+    check_call(cudaMalloc(&A, m * n * sizeof(float)));
+    check_call(cudaMalloc(&B, n * p * sizeof(float)));
+    check_call(cudaMalloc(&C, m * p * sizeof(float)));
+    // Data transfer from host to device
+    // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
+    check_call(cudaMemcpy(A, a->data, m * n * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(B, b->data, n * p * sizeof(float), cudaMemcpyHostToDevice));
+    // GPU blocks and threads settings
+    // Each block will be associated to a shared memory area containing a tile of A and a tile of B of size (tile_size, n) and (n, tile_size) respectively
+    // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
+    const unsigned int tile_size = 32;
+    dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (p + tile_size - 1) / tile_size, 1);
+    dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
+    // Launch kernel
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, 2 * tile_size * n * sizeof(float)>>>(A, B, C, m, n, p);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    // Data transfer from device to host
+    float *c_temp;
+    check_call(cudaMemcpy(c_temp, C, m * p * sizeof(float), cudaMemcpyDeviceToHost));
+    for (std::size_t i = 0; i < m * p; ++i)
+        c->data[i] = *c_temp++;
+    // Free device global memory
+    check(cudaFree(A));
+    check(cudaFree(B));
+    check(cudaFree(C));
+    /*
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
             for (int k = 0; k < p; k++)
                 c->data[i * p + k] += a->data[i * n + j] * b->data[j * p + k];
         }
+    */
     timer_stop(TMR_MATMUL_FW);
 }
 
