@@ -39,14 +39,21 @@ void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
     c->zero();
     float *A, *B, *C;
+    float *a_temp = (float *) malloc(m * n * sizeof(float));
+    float *b_temp = (float *) malloc(n * p * sizeof(float));
+    float *c_temp = (float *) malloc(m * p * sizeof(float));
+    for (std::size_t i = 0; i < m * n; ++i)
+        a_temp[i] = a->data[i];
+    for (std::size_t i = 0; i < n * p; ++i)
+        b_temp[i] = b->temp[i];
     // Allocation of the GPU global memory
     check_call(cudaMalloc(&A, m * n * sizeof(float)));
     check_call(cudaMalloc(&B, n * p * sizeof(float)));
     check_call(cudaMalloc(&C, m * p * sizeof(float)));
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
-    check_call(cudaMemcpy(A, a->data, m * n * sizeof(float), cudaMemcpyHostToDevice));
-    check_call(cudaMemcpy(B, b->data, n * p * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(A, a_temp, m * n * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(B, b_temp, n * p * sizeof(float), cudaMemcpyHostToDevice));
     // GPU blocks and threads settings
     // Each block will be associated to a shared memory area containing a tile of A and a tile of B of size (tile_size, n) and (n, tile_size) respectively
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
@@ -58,14 +65,17 @@ void Matmul::forward(bool training) {
     check_kernel_call();
     cudaDeviceSynchronize();
     // Data transfer from device to host
-    float *c_temp;
     check_call(cudaMemcpy(c_temp, C, m * p * sizeof(float), cudaMemcpyDeviceToHost));
     for (std::size_t i = 0; i < m * p; ++i)
         c->data[i] = *c_temp++;
+    // Free temporary pointers
+    free(a_temp);
+    free(b_temp);
+    free(c_temp);
     // Free device global memory
-    check(cudaFree(A));
-    check(cudaFree(B));
-    check(cudaFree(C));
+    check_call(cudaFree(A));
+    check_call(cudaFree(B));
+    check_call(cudaFree(C));
     /*
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
