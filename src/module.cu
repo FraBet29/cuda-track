@@ -45,7 +45,7 @@ void Matmul::forward(bool training) {
     for (std::size_t i = 0; i < m * n; ++i)
         a_temp[i] = a->data[i];
     for (std::size_t i = 0; i < n * p; ++i)
-        b_temp[i] = b->temp[i];
+        b_temp[i] = b->data[i];
     // Allocation of the GPU global memory
     check_call(cudaMalloc(&A, m * n * sizeof(float)));
     check_call(cudaMalloc(&B, n * p * sizeof(float)));
