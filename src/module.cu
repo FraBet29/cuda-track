@@ -3,6 +3,7 @@
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
 #include <cmath>
+#include <iostream>
 
 // ################################################################################################################
 /**
@@ -50,10 +51,12 @@ void Matmul::forward(bool training) {
     check_call(cudaMalloc(&A, m * n * sizeof(float)));
     check_call(cudaMalloc(&B, n * p * sizeof(float)));
     check_call(cudaMalloc(&C, m * p * sizeof(float)));
+    std::cout << "GPU global memory allocated." <<std::endl;
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     check_call(cudaMemcpy(A, a_temp, m * n * sizeof(float), cudaMemcpyHostToDevice));
     check_call(cudaMemcpy(B, b_temp, n * p * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "Data transfered from host to device." <<std::endl;
     // GPU blocks and threads settings
     // Each block will be associated to a shared memory area containing a tile of A and a tile of B of size (tile_size, n) and (n, tile_size) respectively
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
@@ -64,10 +67,12 @@ void Matmul::forward(bool training) {
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, 2 * tile_size * n * sizeof(float)>>>(A, B, C, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
+    std::cout << "Kernel executed." <<std::endl;
     // Data transfer from device to host
     check_call(cudaMemcpy(c_temp, C, m * p * sizeof(float), cudaMemcpyDeviceToHost));
     for (std::size_t i = 0; i < m * p; ++i)
         c->data[i] = *c_temp++;
+    std::cout << "Result transfered from device to host." <<std::endl;
     // Free temporary pointers
     free(a_temp);
     free(b_temp);
