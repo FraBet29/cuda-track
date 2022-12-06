@@ -13,6 +13,17 @@ Matmul::Matmul(Variable *a, Variable *b, Variable *c, int m, int n, int p) :
         a(a), b(b), c(c), m(m), n(n), p(p) {}
 
 __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int n, int p) {
+    // Multiplication of matrices A and B; the result is stored in the matrix C
+    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    size_t j = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i < m && j < p) 
+    {
+        size_t index = i * p + j;
+        C[index] = 0.0f;
+        for (size_t k = 0; k < n; ++k)
+            C[index] += A[i * n + k] * B[k * p + j];
+    }
+    /*
     // Tile-based multiplication of matrices A and B; the result is stored in the matrix C
     extern __shared__ float sblock[]; // sblock will contain the tile of A, followed by the tile of B
     int i = threadIdx.x + blockIdx.x * blockDim.x; // index of the i-th row of C
@@ -34,6 +45,7 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
         for (std::size_t k = 0; k < n; ++k)
             C[index] += sblock[tx * n + k] * sblock[dim * n + k * dim + ty]; // sblock[tx][k] * sblock[k][ty]
     }
+    */
 }
 
 void Matmul::forward(bool training) {
@@ -51,12 +63,12 @@ void Matmul::forward(bool training) {
     check_call(cudaMalloc(&A, m * n * sizeof(float)));
     check_call(cudaMalloc(&B, n * p * sizeof(float)));
     check_call(cudaMalloc(&C, m * p * sizeof(float)));
-    std::cout << "GPU global memory allocated." <<std::endl;
+    //std::cout << "GPU global memory allocated." << std::endl;
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     check_call(cudaMemcpy(A, a_temp, m * n * sizeof(float), cudaMemcpyHostToDevice));
     check_call(cudaMemcpy(B, b_temp, n * p * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "Data transfered from host to device." <<std::endl;
+    //std::cout << "Data transfered from host to device." << std::endl;
     // GPU blocks and threads settings
     // Each block will be associated to a shared memory area containing a tile of A and a tile of B of size (tile_size, n) and (n, tile_size) respectively
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
@@ -67,12 +79,12 @@ void Matmul::forward(bool training) {
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, 2 * tile_size * n * sizeof(float)>>>(A, B, C, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "Kernel executed." <<std::endl;
+    //std::cout << "Kernel executed." << std::endl;
     // Data transfer from device to host
     check_call(cudaMemcpy(c_temp, C, m * p * sizeof(float), cudaMemcpyDeviceToHost));
+    //std::cout << "Result transfered from device to host." << std::endl;
     for (std::size_t i = 0; i < m * p; ++i)
         c->data[i] = *c_temp++;
-    std::cout << "Result transfered from device to host." <<std::endl;
     // Free temporary pointers
     free(a_temp);
     free(b_temp);
