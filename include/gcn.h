@@ -24,7 +24,9 @@ public:
 class GCN {
     std::vector<Module*> modules;
     std::vector<Variable> variables;
+    std::vector<float*> cuda_variables;
     Variable *input, *output;
+    float **cuda_input, **cuda_output;
     std::vector<int> truth;
     Adam optimizer;
     float loss;
