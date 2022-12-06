@@ -79,11 +79,11 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), params.input_dim * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_weight = &cuda_pointers.back();
     // Initialize W(0)
-    float *temp = (float *) malloc(params.input_dim * params.hidden_dim * sizeof(float));
+    float *temp0 = (float *) malloc(params.input_dim * params.hidden_dim * sizeof(float));
     for (std::size_t i = 0; i < params.input_dim * params.hidden_dim; ++i)
         temp[i] = layer1_weight->data[i];
     check_call(cudaMemcpy(cuda_pointers.back(), temp, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
-    free(temp);
+    free(temp0);
     
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
@@ -116,11 +116,11 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), params.hidden_dim * params.output_dim * sizeof(float)));
     float **layer2_cuda_weight = &cuda_pointers.back();
     // Initialize W(1)
-    float *temp = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
+    float *temp1 = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
     for (std::size_t i = 0; i < params.hidden_dim * params.output_dim; ++i)
         temp[i] = layer2_weight->data[i];
     check_call(cudaMemcpy(cuda_pointers.back(), temp, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
-    free(temp);
+    free(temp1);
     
     // matmul
     modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
