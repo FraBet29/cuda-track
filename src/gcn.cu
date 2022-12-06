@@ -1,6 +1,7 @@
 #include "../include/gcn.h"
 #include "../include/rand.h"
 #include "../include/timer.h"
+#include "../include/cuda_check.h"
 #include <cstdio>
 #include <tuple>
 
@@ -54,31 +55,44 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
     variables.reserve(8);
-    cuda_variables.reserve(8);
+    cuda_pointers.reserve(8);
     variables.emplace_back(data->feature_index.indices.size(), false);
     input = &variables.back();
-    cuda_variables.emplace_back();
-    check_call(cudaMalloc(&cuda_variables[0], data->feature_index.indices.size() * sizeof(float)));
-    cuda_input = &cuda_variables.back();
+    // Allocate GPU memory for the input matrix X
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), data->feature_index.indices.size() * sizeof(float)));
+    cuda_input = &cuda_pointers.back();
 
     // dropout
     modules.push_back(new Dropout(input, params.dropout));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
-    //cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     Variable *layer1_var1 = &variables.back();
-    //float **layer1_cuda_var1 = &cuda_variables.back();
+    // Allocate GPU memory for the output of dropout
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
+    float **layer1_cuda_var1 = &cuda_pointers.back();
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
-    //cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
-    //float **layer1_cuda_weight = &cuda_variables.back();
     layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
+    // Allocate GPU memory for W(0)
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), params.input_dim * params.hidden_dim * sizeof(float)));
+    float **layer1_cuda_weight = &cuda_pointers.back();
+    // Initialize W(0)
+    float *temp = (float *) malloc(params.input_dim * params.hidden_dim * sizeof(float));
+    for (std::size_t i = 0; i < params.input_dim * params.hidden_dim; ++i)
+        temp[i] = layer1_weight->data[i];
+    check_call(cudaMemcpy(cuda_pointers.back(), temp, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
+    free(temp);
     
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
-    //cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     Variable *layer1_var2 = &variables.back();
-    //float **layer1_cuda_var2 = &cuda_variables.back();
+    // Allocate GPU memory for the output of sparsematmul
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
+    float **layer1_cuda_var2 = &cuda_pointers.back();
     
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
@@ -89,21 +103,33 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // dropout
     modules.push_back(new Dropout(layer1_var2, params.dropout));
     variables.emplace_back(params.num_nodes * params.output_dim);
-    //cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     Variable *layer2_var1 = &variables.back();
-    //float **layer2_cuda_var1 = &cuda_variables.back();
+    // Allocate GPU memory for the output of dropout
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
+    float **layer2_cuda_var1 = &cuda_pointers.back();
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
-    //cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
-    //float **layer2_cuda_weight = &cuda_variables.back();
     layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
+    // Allocate GPU memory for W(1)
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), params.hidden_dim * params.output_dim * sizeof(float)));
+    float **layer2_cuda_weight = &cuda_pointers.back();
+    // Initialize W(1)
+    float *temp = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
+    for (std::size_t i = 0; i < params.hidden_dim * params.output_dim; ++i)
+        temp[i] = layer2_weight->data[i];
+    check_call(cudaMemcpy(cuda_pointers.back(), temp, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
+    free(temp);
     
-    // dense matrix multiply
-    modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, params.num_nodes, params.hidden_dim, params.output_dim));
+    // matmul
+    modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
     variables.emplace_back(params.num_nodes * params.output_dim);
-    //cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     output = &variables.back();
-    //cuda_output = &cuda_variables.back();
+    // Allocate GPU memory for the output of matmul
+    cuda_pointers.emplace_back();
+    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
+    cuda_output = &cuda_pointers.back();
     
     // graph sum
     modules.push_back(new GraphSum(layer2_var1, output, &data->graph, params.output_dim));
@@ -135,6 +161,14 @@ void GCN::set_truth(int current_split) {
     for(int i = 0; i < params.num_nodes; i++)
         // truth[i] is the real label of "i"
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
+}
+
+void GCN::set_cuda_input() {
+    float *temp = (float *) malloc(input->data.size() * sizeof(float));
+    for (std::size_t i = 0; i < input->data.size(); ++i)
+        temp[i] = input->data[i];
+    check_call(cudaMemcpy(cuda_input, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    free(temp);
 }
 
 // get the current accuracy of the model
@@ -170,6 +204,10 @@ std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
+
+    // Data transfer from host to device
+    // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
+    set_cuda_input();
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);

@@ -24,14 +24,15 @@ public:
 class GCN {
     std::vector<Module*> modules;
     std::vector<Variable> variables;
-    //std::vector<float*> cuda_variables;
+    std::vector<float*> cuda_pointers;
     Variable *input, *output;
-    //float **cuda_input, **cuda_output;
+    float **cuda_input, **cuda_output;
     std::vector<int> truth;
     Adam optimizer;
     float loss;
     void set_input();
     void set_truth(int current_split);
+    void set_cuda_input();
     float get_accuracy();
     float get_l2_penalty();
     std::pair<float, float> train_epoch();

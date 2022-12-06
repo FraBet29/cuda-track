@@ -13,10 +13,10 @@ public:
 
 class Matmul: public Module {
     Variable *a, *b, *c;
-    float *cuda_a, *cuda_b, *cuda_c;
+    float **cuda_a, **cuda_b, **cuda_c;
     int m, n, p;
 public:
-    Matmul(Variable *a, Variable *b, Variable *c, int m, int n, int p);
+    Matmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, int m, int n, int p);
     ~Matmul();
     void forward(bool);
     void backward();
