@@ -54,30 +54,30 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
     variables.reserve(8);
-    cuda_variables.reserve(8);
+    //cuda_variables.reserve(8);
     variables.emplace_back(data->feature_index.indices.size(), false);
-    cuda_variables.emplace_back(data->feature_index.indices.size(), false);
+    //cuda_variables.emplace_back(data->feature_index.indices.size(), false);
     input = &variables.back();
-    cuda_input = &cuda_variables.back();
+    //cuda_input = &cuda_variables.back();
 
     // dropout
     modules.push_back(new Dropout(input, params.dropout));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
-    cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
+    //cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     Variable *layer1_var1 = &variables.back();
-    float **layer1_cuda_var1 = &cuda_variables.back();
+    //float **layer1_cuda_var1 = &cuda_variables.back();
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
-    cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
+    //cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
-    float **layer1_cuda_weight = &cuda_variables.back();
+    //float **layer1_cuda_weight = &cuda_variables.back();
     layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
     
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
-    cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
+    //cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     Variable *layer1_var2 = &variables.back();
-    float **layer1_cuda_var2 = &cuda_variables.back();
+    //float **layer1_cuda_var2 = &cuda_variables.back();
     
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
@@ -88,21 +88,21 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // dropout
     modules.push_back(new Dropout(layer1_var2, params.dropout));
     variables.emplace_back(params.num_nodes * params.output_dim);
-    cuda_variables.emplace_back(params.num_nodes * params.output_dim);
+    //cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     Variable *layer2_var1 = &variables.back();
-    float **layer2_cuda_var1 = &cuda_variables.back();
+    //float **layer2_cuda_var1 = &cuda_variables.back();
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
-    cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
+    //cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
-    float **layer2_cuda_weight = &cuda_variables.back();
+    //float **layer2_cuda_weight = &cuda_variables.back();
     layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
     
     // dense matrix multiply
     modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, params.num_nodes, params.hidden_dim, params.output_dim));
     variables.emplace_back(params.num_nodes * params.output_dim);
-    cuda_variables.emplace_back(params.num_nodes * params.output_dim);
+    //cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     output = &variables.back();
-    cuda_output = &cuda_variables.back();
+    //cuda_output = &cuda_variables.back();
     
     // graph sum
     modules.push_back(new GraphSum(layer2_var1, output, &data->graph, params.output_dim));
