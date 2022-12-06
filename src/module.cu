@@ -84,7 +84,7 @@ void Matmul::forward(bool training) {
     check_call(cudaMemcpy(c_temp, C, m * p * sizeof(float), cudaMemcpyDeviceToHost));
     //std::cout << "Result transfered from device to host." << std::endl;
     for (std::size_t i = 0; i < m * p; ++i)
-        c->data[i] = *c_temp[i];
+        c->data[i] = c_temp[i];
     // Free temporary pointers
     free(a_temp);
     free(b_temp);
