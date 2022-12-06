@@ -167,7 +167,7 @@ void GCN::set_cuda_input() {
     float *temp = (float *) malloc(input->data.size() * sizeof(float));
     for (std::size_t i = 0; i < input->data.size(); ++i)
         temp[i] = input->data[i];
-    check_call(cudaMemcpy(cuda_input, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(*cuda_input, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
     free(temp);
 }
 
