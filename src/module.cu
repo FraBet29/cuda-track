@@ -15,8 +15,7 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
     // Multiplication of matrices A and B; the result is stored in the matrix C
     size_t i = threadIdx.x + blockIdx.x * blockDim.x;
     size_t j = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i < m && j < p) 
-    {
+    if (i < m && j < p) {
         size_t index = i * p + j;
         C[index] = 0.0f;
         for (size_t k = 0; k < n; ++k)
