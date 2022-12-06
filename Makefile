@@ -4,7 +4,7 @@ CXX=nvcc
 CXXFLAGS=-O3
 LDFLAGS=-lm -lstdc++
 
-CXXFILES=src/gcn.cpp src/optim.cpp src/module.cu src/variable.cpp src/parser.cpp src/rand.cpp src/timer.cpp src/cuda_check.cu
+CXXFILES=src/gcn.cu src/optim.cpp src/module.cu src/variable.cpp src/parser.cpp src/rand.cpp src/timer.cpp src/cuda_check.cu
 HFILES=include/gcn.h include/optim.h include/module.h include/variable.h include/sparse.h include/parser.h include/rand.h include/timer.h include/cuda_check.h
 
 
