@@ -91,7 +91,6 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a
                 temp_indptr[i] = sp->indptr[i];
             for (size_t i = 0; i < sp->indices.size(); ++i)
                 temp_indices[i] = sp->indices[i];
-            // ERROR?
             check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
             check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
             check_call(cudaMemcpy(*cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
