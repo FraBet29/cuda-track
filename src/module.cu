@@ -120,7 +120,7 @@ void SparseMatmul::forward(bool training) {
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
     // ERROR!
-    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, cuda_sp_indptr, cuda_sp_indices, p, sp->indptr.size() - 1);
+    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, *cuda_sp_indptr, *cuda_sp_indices, p, sp->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
