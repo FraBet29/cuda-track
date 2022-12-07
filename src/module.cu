@@ -93,12 +93,11 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a
                 temp_indptr[i] = sp->indptr[i];
             for (size_t i = 0; i < sp->indices.size(); ++i)
                 temp_indices[i] = sp->indices[i];
-            std::cout << "malloc and data copy ok" << std::endl;
             check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
             check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
-            std::cout << "gpu alloc ok" << std::endl;
-            check_call(cudaMemcpy(*cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
-            check_call(cudaMemcpy(*cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
+            std::cout << "gpu allocation ok" << std::endl;
+            check_call(cudaMemcpy(cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
             std::cout << "gpu data transfer ok" << std::endl;
             free(temp_indptr);
             free(temp_indices);
@@ -124,7 +123,7 @@ void SparseMatmul::forward(bool training) {
     dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
-    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, *cuda_sp_indptr, *cuda_sp_indices, p, sp->indptr.size() - 1);
+    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, cuda_sp_indptr, cuda_sp_indices, p, sp->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*

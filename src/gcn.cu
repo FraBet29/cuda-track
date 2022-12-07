@@ -88,18 +88,12 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
 
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
-    std::cout << "ok 1" << std::endl;
     variables.emplace_back(params.num_nodes * params.hidden_dim);
-    std::cout << "ok 2" << std::endl;
     Variable *layer1_var2 = &variables.back();
-    std::cout << "sparsematmul CPU ok" << std::endl;
     // Allocate GPU memory for the output of sparsematmul
     cuda_pointers.emplace_back();
-    std::cout << "ok 3" << std::endl;
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
-    std::cout << "ok 4" << std::endl;
     float **layer1_cuda_var2 = &cuda_pointers.back();
-    std::cout << "sparsematmul GPU ok" << std::endl;
 
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
@@ -115,6 +109,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
     float **layer2_cuda_var1 = &cuda_pointers.back();
+    
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
     layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization

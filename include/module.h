@@ -26,7 +26,7 @@ class SparseMatmul: public Module {
     Variable *a, *b, *c;
     float **cuda_a, **cuda_b, **cuda_c;
     SparseIndex *sp;
-    int **cuda_sp_indptr, **cuda_sp_indices;
+    int *cuda_sp_indptr, *cuda_sp_indices;
     int m, n, p;
 public:
     SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p);
