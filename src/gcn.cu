@@ -72,8 +72,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var1 = &cuda_pointers.back();
     
-    std::cout << "Dropout allocated" << std::endl;
-
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
     layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
@@ -81,9 +79,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.input_dim * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_weight = &cuda_pointers.back();
-
-    std::cout << "W(0) allocated" << std::endl;
-
     // Initialize W(0)
     float *temp0 = (float *) malloc(params.input_dim * params.hidden_dim * sizeof(float));
     for (std::size_t i = 0; i < params.input_dim * params.hidden_dim; ++i)
@@ -91,27 +86,27 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMemcpy(cuda_pointers.back(), temp0, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp0);
 
-    std::cout << "W(0) initialized" << std::endl;
-    
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
+    std::cout << "ok 1" << std::endl;
     variables.emplace_back(params.num_nodes * params.hidden_dim);
+    std::cout << "ok 2" << std::endl;
     Variable *layer1_var2 = &variables.back();
+    std::cout << "sparsematmul CPU ok" << std::endl;
     // Allocate GPU memory for the output of sparsematmul
     cuda_pointers.emplace_back();
+    std::cout << "ok 3" << std::endl;
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
+    std::cout << "ok 4" << std::endl;
     float **layer1_cuda_var2 = &cuda_pointers.back();
+    std::cout << "sparsematmul GPU ok" << std::endl;
 
-    std::cout << "Sparsematmul allocated" << std::endl;
-    
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
     
     // RELU
     modules.push_back(new ReLU(layer1_var2));
 
-    std::cout << "1st layer allocated" << std::endl;
-    
     // dropout
     modules.push_back(new Dropout(layer1_var2, params.dropout));
     variables.emplace_back(params.num_nodes * params.output_dim);
@@ -150,8 +145,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // cross entropy loss
     modules.push_back(new CrossEntropyLoss(output, truth.data(), &loss, params.output_dim));
 
-    std::cout << "GCN allocated" << std::endl;
-    
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
     adam_params.lr = params.learning_rate;
