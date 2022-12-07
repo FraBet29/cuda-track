@@ -85,16 +85,17 @@ void Matmul::backward() {
 */
 SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
-            int * temp_indptr = (int * ) malloc(sp->indptr.size() * sizeof(int));
-            int * temp_indices = (int * ) malloc(sp->indices.size() * sizeof(int));
+            int * temp_indptr = (int *) malloc(sp->indptr.size() * sizeof(int));
+            int * temp_indices = (int *) malloc(sp->indices.size() * sizeof(int));
             for (size_t i = 0; i < sp->indptr.size(); ++i)
                 temp_indptr[i] = sp->indptr[i];
             for (size_t i = 0; i < sp->indices.size(); ++i)
                 temp_indices[i] = sp->indices[i];
+            // ERROR?
             check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
             check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
-            check_call(cudaMemcpy(&cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
-            check_call(cudaMemcpy(&cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(*cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(*cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
             free(temp_indptr);
             free(temp_indices);
         }
@@ -119,7 +120,6 @@ void SparseMatmul::forward(bool training) {
     dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
-    // ERROR!
     sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, *cuda_sp_indptr, *cuda_sp_indices, p, sp->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
