@@ -3,6 +3,7 @@
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
 #include <cmath>
+#include <iostream>
 
 // ################################################################################################################
 /**
@@ -85,16 +86,20 @@ void Matmul::backward() {
 */
 SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
+            std::cout << "constructor run begins" << std::endl;
             int * temp_indptr = (int *) malloc(sp->indptr.size() * sizeof(int));
             int * temp_indices = (int *) malloc(sp->indices.size() * sizeof(int));
             for (size_t i = 0; i < sp->indptr.size(); ++i)
                 temp_indptr[i] = sp->indptr[i];
             for (size_t i = 0; i < sp->indices.size(); ++i)
                 temp_indices[i] = sp->indices[i];
+            std::cout << "malloc and data copy ok" << std::endl;
             check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
             check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
+            std::cout << "gpu alloc ok" << std::endl;
             check_call(cudaMemcpy(*cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
             check_call(cudaMemcpy(*cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
+            std::cout << "gpu data transfer ok" << std::endl;
             free(temp_indptr);
             free(temp_indices);
         }
