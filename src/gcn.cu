@@ -63,6 +63,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), data->feature_index.indices.size() * sizeof(float)));
     cuda_input = &cuda_pointers.back();
 
+    std::cout << "Input allocated" << std::endl;
+
     // dropout
     modules.push_back(new Dropout(input, params.dropout));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
@@ -99,6 +101,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     
     // RELU
     modules.push_back(new ReLU(layer1_var2));
+
+    std::cout << "1st layer allocated" << std::endl;
     
     // dropout
     modules.push_back(new Dropout(layer1_var2, params.dropout));
@@ -137,6 +141,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     
     // cross entropy loss
     modules.push_back(new CrossEntropyLoss(output, truth.data(), &loss, params.output_dim));
+
+    std::cout << "GCN allocated" << std::endl;
     
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
