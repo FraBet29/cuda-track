@@ -85,7 +85,6 @@ void Matmul::backward() {
 */
 SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
-            /*
             int * temp_indptr = (int * ) malloc(sp->indptr.size() * sizeof(int));
             int * temp_indices = (int * ) malloc(sp->indices.size() * sizeof(int));
             for (size_t i = 0; i < sp->indptr.size(); ++i)
@@ -98,7 +97,6 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a
             check_call(cudaMemcpy(&cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
             free(temp_indptr);
             free(temp_indices);
-            */
         }
 
 __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int p, int N) {
@@ -116,22 +114,15 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
     c->zero();
-    int * temp_indptr = (int * ) malloc(sp->indptr.size() * sizeof(int));
-    int * temp_indices = (int * ) malloc(sp->indices.size() * sizeof(int));
-    for (size_t i = 0; i < sp->indptr.size(); ++i)
-        temp_indptr[i] = sp->indptr[i];
-    for (size_t i = 0; i < sp->indices.size(); ++i)
-        temp_indices[i] = sp->indices[i];
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
     dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
-    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, temp_indptr, temp_indices, p, sp->indptr.size() - 1);
+    // ERROR!
+    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, cuda_sp_indptr, cuda_sp_indices, p, sp->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
-    free(temp_indptr);
-    free(temp_indices);
     /*
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
