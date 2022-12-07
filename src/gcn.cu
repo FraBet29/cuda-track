@@ -63,8 +63,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), data->feature_index.indices.size() * sizeof(float)));
     cuda_input = &cuda_pointers.back();
 
-    std::cout << "Input allocated" << std::endl;
-
     // dropout
     modules.push_back(new Dropout(input, params.dropout));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
@@ -73,6 +71,9 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var1 = &cuda_pointers.back();
+    
+    std::cout << "Dropout allocated" << std::endl;
+
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
     layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
@@ -80,12 +81,17 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.input_dim * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_weight = &cuda_pointers.back();
+
+    std::cout << "W(0) allocated" << std::endl;
+
     // Initialize W(0)
     float *temp0 = (float *) malloc(params.input_dim * params.hidden_dim * sizeof(float));
     for (std::size_t i = 0; i < params.input_dim * params.hidden_dim; ++i)
         temp0[i] = layer1_weight->data[i];
     check_call(cudaMemcpy(cuda_pointers.back(), temp0, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp0);
+
+    std::cout << "W(0) initialized" << std::endl;
     
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
@@ -95,6 +101,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var2 = &cuda_pointers.back();
+
+    std::cout << "Sparsematmul allocated" << std::endl;
     
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
