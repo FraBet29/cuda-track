@@ -99,7 +99,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
     
     // RELU
-    modules.push_back(new ReLU(layer1_var2));
+    modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
 
     // dropout
     modules.push_back(new Dropout(layer1_var2, params.dropout));
@@ -204,18 +204,18 @@ float GCN::get_l2_penalty() {
 */
 std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
-    std::cout << "OK 1" << std::endl;
+    //std::cout << "OK 1" << std::endl;
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
-    std::cout << "OK 2" << std::endl;
+    //std::cout << "OK 2" << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
-    std::cout << "OK 3" << std::endl;
+    //std::cout << "OK 3" << std::endl;
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
@@ -252,7 +252,6 @@ void GCN::run() {
         float train_loss, train_acc, val_loss, val_acc;
         timer_start(TMR_TRAIN); // just for timing purposes
         std::tie(train_loss, train_acc) = train_epoch(); // train the epoch and record the current train_loss and train_accuracy
-        std::cout << "OK" << std::endl;
         std::tie(val_loss, val_acc) = eval(2); //eval the model at the current step in order to obtain the val_loss and val_accuracy
         printf("epoch=%d train_loss=%.5f train_acc=%.5f val_loss=%.5f val_acc=%.5f time=%.5f\n",
             epoch, train_loss, train_acc, val_loss, val_acc, timer_stop(TMR_TRAIN));

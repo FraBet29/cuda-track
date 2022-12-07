@@ -60,9 +60,11 @@ public:
 
 class ReLU: public Module {
     Variable *in;
+    float **cuda_in;
     bool *mask;
+    bool *cuda_mask;
 public:
-    ReLU(Variable *in);
+    ReLU(Variable *in, float **cuda_in);
     ~ReLU();
     void forward(bool);
     void backward();

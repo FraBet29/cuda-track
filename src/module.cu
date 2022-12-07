@@ -86,7 +86,6 @@ void Matmul::backward() {
 */
 SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
-            std::cout << "constructor run begins" << std::endl;
             int * temp_indptr = (int *) malloc(sp->indptr.size() * sizeof(int));
             int * temp_indices = (int *) malloc(sp->indices.size() * sizeof(int));
             for (size_t i = 0; i < sp->indptr.size(); ++i)
@@ -95,10 +94,8 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a
                 temp_indices[i] = sp->indices[i];
             check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
             check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
-            std::cout << "gpu allocation ok" << std::endl;
             check_call(cudaMemcpy(cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
             check_call(cudaMemcpy(cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
-            std::cout << "gpu data transfer ok" << std::endl;
             free(temp_indptr);
             free(temp_indices);
         }
@@ -240,22 +237,45 @@ void CrossEntropyLoss::backward() {
  * Rectified Linear Unit activation function.
  * If input is negative it will output 0.
 */
-ReLU::ReLU(Variable *in) {
+ReLU::ReLU(Variable *in, float **cuda_in) {
     this->in = in;
+    this->cuda_in = cuda_in;
     mask = new bool[in->data.size()];
+    check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(bool)));
+    check_call(cudaMemcpy(cuda_mask, mask, in->data.size() * sizeof(bool), cudaMemcpyHostToDevice));
 }
 
 ReLU::~ReLU() {
     delete[] mask;
+    check_call(cudaFree(cuda_mask));
+}
+
+__global__ void relu_forward_parallel(float *in, bool *mask, int N, bool training) {
+    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
+        bool keep = in[i] > 0;
+        if (training) mask[i] = keep;
+        if (!keep) in[i] = 0;
+    }
 }
 
 void ReLU::forward(bool training) {
     timer_start(TMR_RELU_FW);
+    // GPU blocks and threads settings
+    const unsigned int max_num_threads = 1024;
+    dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    // Launch kernel
+    relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), training);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = in->data[i] > 0;
         if (training) mask[i] = keep;
         if (!keep) in->data[i] = 0;
     }
+    */
     timer_stop(TMR_RELU_FW);
 }
 
