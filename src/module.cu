@@ -107,7 +107,7 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
             for (int k = 0; k < p; k++)
-                atomicAdd(C[i * p + k], A[jj] * B[j * p + k]);
+                atomicAdd(&C[i * p + k], A[jj] * B[j * p + k]);
             // SYNCHRONIZATION NEEDED NOW?
         }
     }        
