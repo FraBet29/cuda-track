@@ -26,8 +26,7 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
     extern __shared__ float sblock[]; // sblock will contain the tile of A, followed by the tile of B
     int i = threadIdx.x + blockIdx.x * blockDim.x; // index of the i-th row of C
     int j = threadIdx.y + blockIdx.y * blockDim.y; // index of the j-th column of C
-    if (i < m && j < p)
-    {   
+    if (i < m && j < p) {   
         int tx = threadIdx.x;
         int ty = threadIdx.y;
         int dim = blockDim.x;
@@ -84,18 +83,63 @@ void Matmul::backward() {
 /**
  * A sparse matrix multiplication layer.
 */
-SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, SparseIndex *sp, int m, int n, int p) :
-        a(a), b(b), c(c), sp(sp), m(m), n(n), p(p) {}
+SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
+        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
+            /*
+            int * temp_indptr = (int * ) malloc(sp->indptr.size() * sizeof(int));
+            int * temp_indices = (int * ) malloc(sp->indices.size() * sizeof(int));
+            for (size_t i = 0; i < sp->indptr.size(); ++i)
+                temp_indptr[i] = sp->indptr[i];
+            for (size_t i = 0; i < sp->indices.size(); ++i)
+                temp_indices[i] = sp->indices[i];
+            check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
+            check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
+            check_call(cudaMemcpy(&cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(&cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
+            free(temp_indptr);
+            free(temp_indices);
+            */
+        }
+
+__global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int p, int N) {
+    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
+        for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
+            int j = indices[jj];
+            for (int k = 0; k < p; k++)
+                atomicAdd(C[i * p + k], A[jj] * B[j * p + k]);
+            // SYNCHRONIZATION NEEDED NOW?
+        }
+    }        
+}
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
     c->zero();
+    int * temp_indptr = (int * ) malloc(sp->indptr.size() * sizeof(int));
+    int * temp_indices = (int * ) malloc(sp->indices.size() * sizeof(int));
+    for (size_t i = 0; i < sp->indptr.size(); ++i)
+        temp_indptr[i] = sp->indptr[i];
+    for (size_t i = 0; i < sp->indices.size(); ++i)
+        temp_indices[i] = sp->indices[i];
+    // GPU blocks and threads settings
+    const unsigned int max_num_threads = 1024;
+    dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    // Launch kernel
+    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, temp_indptr, temp_indices, p, sp->indptr.size() - 1);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    free(temp_indptr);
+    free(temp_indices);
+    /*
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
             int j = sp->indices[jj];
             for (int k = 0; k < p; k++)
                 c->data[i * p + k] += a->data[jj] * b->data[j * p + k];
         }
+    */
     timer_stop(TMR_SPMATMUL_FW);
 }
 

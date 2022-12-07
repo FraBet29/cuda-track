@@ -86,7 +86,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     free(temp0);
     
     // sparsematmul
-    modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
+    modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
     Variable *layer1_var2 = &variables.back();
     // Allocate GPU memory for the output of sparsematmul
@@ -218,6 +218,8 @@ std::pair<float, float> GCN::train_epoch() {
         modules[i]->backward();
 
     optimizer.step(); // apply a step of the adapm optimization
+
+    // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION
 
     return {train_loss, train_acc};
 }
