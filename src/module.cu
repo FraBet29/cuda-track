@@ -309,7 +309,7 @@ Dropout::~Dropout() {
     check_call(cudaFree(cuda_mask));
 }
 
-__global__ dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *state, unsigned rand_max) {
+__global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *state, unsigned rand_max) {
     size_t i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
         float my_randf = curand_uniform(state + i);
