@@ -304,6 +304,7 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
         mask = nullptr;
     }
     // NULLPTR FOR CUDA POINTERS?
+    /*
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
@@ -313,6 +314,7 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
+    */
 }
 
 Dropout::~Dropout() {
