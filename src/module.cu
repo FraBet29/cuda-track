@@ -87,8 +87,8 @@ void Matmul::backward() {
 */
 SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
-            int * temp_indptr = (int *) malloc(sp->indptr.size() * sizeof(int));
-            int * temp_indices = (int *) malloc(sp->indices.size() * sizeof(int));
+            int *temp_indptr = (int *) malloc(sp->indptr.size() * sizeof(int));
+            int *temp_indices = (int *) malloc(sp->indices.size() * sizeof(int));
             for (size_t i = 0; i < sp->indptr.size(); ++i)
                 temp_indptr[i] = sp->indptr[i];
             for (size_t i = 0; i < sp->indices.size(); ++i)
@@ -158,8 +158,8 @@ void SparseMatmul::backward() {
 */
 GraphSum::GraphSum(Variable *in, Variable *out, float **cuda_in, float ** cuda_out, SparseIndex *graph, int dim) :
         in(in), out(out), cuda_in(cuda_in), cuda_out(cuda_out), graph(graph), dim(dim) {
-            int * temp_indptr = (int *) malloc(graph->indptr.size() * sizeof(int));
-            int * temp_indices = (int *) malloc(graph->indices.size() * sizeof(int));
+            int *temp_indptr = (int *) malloc(graph->indptr.size() * sizeof(int));
+            int *temp_indices = (int *) malloc(graph->indices.size() * sizeof(int));
             for (size_t i = 0; i < graph->indptr.size(); ++i)
                 temp_indptr[i] = graph->indptr[i];
             for (size_t i = 0; i < graph->indices.size(); ++i)
@@ -237,14 +237,82 @@ void GraphSum::backward() {
  * Each predicted class probability is compared to the actual class desired and a loss is computed to penalize the proabability based on how far it is with respect to the actual expected value.
  * Also called logaritmic loss. 
 */
-CrossEntropyLoss::CrossEntropyLoss(Variable *logits, int *truth, float *loss, int num_classes) :
-        logits(logits), truth(truth), loss(loss), num_classes(num_classes) {}
+CrossEntropyLoss::CrossEntropyLoss(Variable *logits, float** cuda_logits, int *truth, int *cuda_truth, float *loss, float **cuda_loss, int num_classes) :
+        logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
+            float *temp_logits_data = (float *) malloc(logits->data.size() * sizeof(float));
+            float *temp_logits_grad = (float *) malloc(logits->grad.size() * sizeof(float));
+            // EXTRACT RAW MALLOC DATA FROM VECTORS?
+            for (size_t i = 0; i < logits->data.size(); ++i)
+                temp_logits_data[i] = logits->data[i];
+            for (size_t i = 0; i < logits->grad.size(); ++i)
+                temp_logits_grad[i] = logits->grad.size();
+            check_call(cudaMalloc(&cuda_logits_data, logits->data.size() * sizeof(float)));
+            check_call(cudaMalloc(&(*cuda_logits_grad), logits->grad.size() * sizeof(float)));
+            check_call(cudaMemcpy(cuda_logits_data, temp_logits_data, logits->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(*cuda_logits_grad, temp_logits_grad, logits->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
+            free(temp_logits_data);
+            free(temp_logits_grad);             
+        }
+
+// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY
+
+__global__ void crossentropyloss_forward_parallel1(float *truth, float *logits_data, float *logits_grad, float *loss, int *count, bool training, int N, int n) {
+    // N: logits->data.size(), n: num_classes
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N / n) {
+        if (truth[i] >= 0) {
+            atomicAdd(&count, 1);
+            float *logit = &logits_data[i * n];
+            float max_logit = -1e30, sum_exp = 0;
+            for (int j = 0; j < n; j++)
+                max_logit = fmaxf(max_logit, logit[j]);
+            for (int j = 0; j < num_classes; j++) {
+                logit[j] -= max_logit;
+                sum_exp += expf(logit[j]);
+            }
+            atomicAdd(&loss, logf(sum_exp) - logit[truth[i]]);
+            if (training) {
+                for (int j = 0; j < n; j++) {
+                    float prob = expf(logit[j]) / sum_exp;
+                    logits_grad[i * n + j] = prob;
+                }
+                _synchthreads();
+                atomicAdd(logits_grad[i * n + truth[i]], -1.0);
+            }
+        }
+    }
+    _synchthreads();
+    if (i == 0)
+        *loss /= *count;
+}
+
+__global__ void crossentropyloss_forward_parallel2(float *logits_grad, int *count, int N) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N)
+        logits_grad[i] /= *count;
+}
 
 void CrossEntropyLoss::forward(bool training) {
     timer_start(TMR_LOSS_FW);
     float total_loss = 0;
     int count = 0;
+    int *cuda_count;
+    check_call(cudaMalloc(&cuda_count, sizeof(int)));
     if (training) logits->zero_grad();
+    // GPU blocks and threads settings
+    const unsigned int max_num_threads = 1024;
+    dim3 blocksPerGrid1((logits->data.size() / num_classes + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(cuda_truth, cuda_logits_data, *cuda_logits_grad, *cuda_loss, cuda_count, training, logits->data.size(), num_classes);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    check_call(cudaMemcpy(&loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
+    if (training) {
+        dim3 blocksPerGrid2((logits->grad.size() + max_num_threads - 1) / max_num_threads, 1, 1);
+        crossentropyloss_forward_parallel2<<<blocksPerGrid2, threadsPerBlock>>>(*cuda_logits_grad, cuda_count, logits->grad.size());
+    }
+    check_call(cudaFree(cuda_count));
+    /*
     for (int i = 0; i < logits->data.size() / num_classes; i++) {
         if (truth[i] < 0) continue;
         count++;
@@ -270,6 +338,7 @@ void CrossEntropyLoss::forward(bool training) {
     if (training)
         for (float & i : logits->grad)
             i /= count;
+    */
     timer_stop(TMR_LOSS_FW);
 }
 

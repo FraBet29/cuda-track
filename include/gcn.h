@@ -28,8 +28,10 @@ class GCN {
     Variable *input, *output;
     float **cuda_input, **cuda_output;
     std::vector<int> truth;
+    int *cuda_truth;
     Adam optimizer;
     float loss;
+    float **cuda_loss;
     void set_input();
     void set_truth(int current_split);
     void set_cuda_input();

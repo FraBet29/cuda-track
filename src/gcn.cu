@@ -51,6 +51,7 @@ GCNParams GCNParams::get_default() {
 
 GCN::GCN(GCNParams params, GCNData *input_data) {
     init_rand_state();
+    // INITIALIZE CUDA RANDOM STATE HERE?
     this->params = params;
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
@@ -148,9 +149,10 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // graph sum
     modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
     truth = std::vector<int>(params.num_nodes);
+    check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
     
     // cross entropy loss
-    modules.push_back(new CrossEntropyLoss(output, truth.data(), &loss, params.output_dim));
+    modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, &cuda_loss, params.output_dim));
 
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
