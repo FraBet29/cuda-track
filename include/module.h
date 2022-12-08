@@ -3,6 +3,7 @@
 //#include <immintrin.h>
 #include "variable.h"
 #include "sparse.h"
+#include "cuda_rand.h"
 
 class Module {
 public:
