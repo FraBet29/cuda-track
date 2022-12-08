@@ -143,7 +143,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     float *temp1 = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
     for (std::size_t i = 0; i < params.hidden_dim * params.output_dim; ++i)
         temp1[i] = layer2_weight->data[i];
-    check_call(cudaMemcpy(&cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp1);
     
     // matmul
