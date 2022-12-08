@@ -299,7 +299,6 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     if (!in->grad.empty()) {
         mask = new int[in->data.size()];
         check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
-        std::cout << "dropout check 1" << std::endl;
     }
     else mask = nullptr;
     // NULLPTR FOR CUDA POINTERS?
@@ -309,11 +308,9 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Initialize CUDA random
     check_call(cudaMalloc(&cuda_rand_state, in->data.size() * sizeof(curandState)));
-    std::cout << "dropout check 2" << std::endl;
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "dropout check 3" << std::endl;
 }
 
 Dropout::~Dropout() {

@@ -102,14 +102,13 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
 
     // dropout
-    std::cout << "dropout 2 allocation" << std::endl;
     modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
-    std::cout << "dropout 2 allocated" << std::endl;
     variables.emplace_back(params.num_nodes * params.output_dim);
     Variable *layer2_var1 = &variables.back();
     // Allocate GPU memory for the output of dropout
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
+    std::cout << "check 1" << std::endl;
     float **layer2_cuda_var1 = &cuda_pointers.back();
     
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
@@ -118,12 +117,14 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // Allocate GPU memory for W(1)
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.hidden_dim * params.output_dim * sizeof(float)));
+    std::cout << "check 2" << std::endl;
     float **layer2_cuda_weight = &cuda_pointers.back();
     // Initialize W(1)
     float *temp1 = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
     for (std::size_t i = 0; i < params.hidden_dim * params.output_dim; ++i)
         temp1[i] = layer2_weight->data[i];
     check_call(cudaMemcpy(cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "check 3" << std::endl;
     free(temp1);
     
     // matmul
@@ -133,6 +134,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // Allocate GPU memory for the output of matmul
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
+    std::cout << "check 4" << std::endl;
     cuda_output = &cuda_pointers.back();
     
     // graph sum
