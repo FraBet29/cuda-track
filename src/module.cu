@@ -331,7 +331,7 @@ void Dropout::forward(bool training) {
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Initialize CUDA random
     curandState *state;
-    cudaMalloc(&state, sizeof(curandState));
+    cudaMalloc(&state, in->data.size() * sizeof(curandState));
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);
     check_kernel_call();
     cudaDeviceSynchronize();
