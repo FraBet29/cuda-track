@@ -2,6 +2,7 @@
 #include "../include/rand.h"
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
+#include "../include/cuda_rand.h"
 #include <cmath>
 #include <iostream>
 
@@ -242,7 +243,6 @@ ReLU::ReLU(Variable *in, float **cuda_in) {
     this->cuda_in = cuda_in;
     mask = new bool[in->data.size()];
     check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(bool)));
-    check_call(cudaMemcpy(cuda_mask, mask, in->data.size() * sizeof(bool), cudaMemcpyHostToDevice));
 }
 
 ReLU::~ReLU() {
@@ -292,16 +292,33 @@ void ReLU::backward() {
  * The dropout layer randomly sets input units to 0 with a frequency of P at each step during training time to prevent overfitting. 
  * Inputs that are not set to 0 are scaled up by 1/(1-P).
 */
-Dropout::Dropout(Variable *in, float p) {
+Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     this->in = in;
+    this->cuda_in = cuda_in;
     this->p = p;
-    if (!in->grad.empty()) 
+    if (!in->grad.empty()) {
         mask = new int[in->data.size()];
+        check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
+    }    
     else mask = nullptr;
+    // NULLPTR FOR CUDA POINTERS?
 }
 
 Dropout::~Dropout() {
     if (mask) delete[] mask;
+    check_call(cudaFree(cuda_mask));
+}
+
+__global__ dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *state, unsigned rand_max) {
+    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
+        float my_randf = curand_uniform(state + i);
+        my_randf *= rand_max + 1;
+        int my_rand = (int) truncf(my_randf);
+        bool keep = my_rand >= threshold;
+        in[i] *= keep ? scale : 0;
+        if (mask) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
+    }
 }
 
 void Dropout::forward(bool training) {
@@ -309,11 +326,25 @@ void Dropout::forward(bool training) {
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
     float scale = 1 / (1 - p);
+    // GPU blocks and threads settings
+    const unsigned int max_num_threads = 1024;
+    dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    // CUDA random settings
+    curandState *state;
+    cudaMalloc(&state, sizeof(curandState));
+    setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);    
+    // Launch kernel
+    dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, state, MY_CUDA_RAND_MAX);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int)RAND() >= threshold;
         in->data[i] *= keep ? scale : 0;
         if (mask) mask[i] = keep;
     }
+    */
     timer_stop(TMR_DROPOUT_FW);
 }
 
