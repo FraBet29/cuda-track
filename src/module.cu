@@ -300,7 +300,10 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
         mask = new int[in->data.size()];
         check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
     }
-    else mask = nullptr;
+    else {
+        mask = nullptr;
+        check_call(cudaMalloc(&cuda_mask, 0));
+    }
     // NULLPTR FOR CUDA POINTERS?
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
