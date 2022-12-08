@@ -156,8 +156,8 @@ void SparseMatmul::backward() {
 /**
  * A specialized sparse matrix multiplication for graphs.
 */
-GraphSum::GraphSum(Variable *in, Variable *out, SparseIndex *graph, int dim) :
-        in(in), out(out), graph(graph), dim(dim) {
+GraphSum::GraphSum(Variable *in, Variable *out, float **cuda_in, float ** cuda_out, SparseIndex *graph, int dim) :
+        in(in), out(out), cuda_in(cuda_in), cuda_out(cuda_out), graph(graph), dim(dim) {
             int * temp_indptr = (int *) malloc(graph->indptr.size() * sizeof(int));
             int * temp_indices = (int *) malloc(graph->indices.size() * sizeof(int));
             for (size_t i = 0; i < graph->indptr.size(); ++i)
@@ -195,7 +195,7 @@ void GraphSum::forward(bool training) {
     out->zero();
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
-    dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 blocksPerGrid((graph->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, *cuda_out, cuda_graph_indptr, cuda_graph_indices, dim, graph->indptr.size() - 1);
