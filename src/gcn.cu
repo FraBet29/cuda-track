@@ -62,6 +62,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), data->feature_index.indices.size() * sizeof(float)));
     cuda_input = &cuda_pointers.back();
+    std::cout << "ok before dropout" << std::endl;
 
     // dropout
     modules.push_back(new Dropout(input, cuda_input, params.dropout));
@@ -71,6 +72,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var1 = &cuda_pointers.back();
+    std::cout << "ok after 1st dropout" << std::endl;
     
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
@@ -85,7 +87,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
         temp0[i] = layer1_weight->data[i];
     check_call(cudaMemcpy(cuda_pointers.back(), temp0, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp0);
-
+    
+    std::cout << "ok before sparsematmul" << std::endl;
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
@@ -95,12 +98,15 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var2 = &cuda_pointers.back();
 
+    std::cout << "ok before graphsum" << std::endl;
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
     
+    std::cout << "ok before relu" << std::endl;
     // RELU
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
 
+    std::cout << "ok before 2nd dropout" << std::endl;
     // dropout
     modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
     variables.emplace_back(params.num_nodes * params.output_dim);
@@ -109,6 +115,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
     float **layer2_cuda_var1 = &cuda_pointers.back();
+    std::cout << "ok after 2nd dropout" << std::endl;
     
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
