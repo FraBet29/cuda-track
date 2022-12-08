@@ -7,7 +7,7 @@
 
 #define MY_CUDA_RAND_MAX 0x7fffffff
 
-__global__ void setup_kernel(curandState *state);
+extern __global__ void setup_kernel(curandState *state);
 
 
 #define CUDA_RAND_H
