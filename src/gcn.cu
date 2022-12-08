@@ -117,14 +117,14 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     std::cout << "ok 2nd dropout add cuda pointer" << std::endl;
 
     int num_gpus;
-    size_t free, total;
+    size_t free_mem, total_mem;
     cudaGetDeviceCount(&num_gpus);
     for (int gpu_id = 0; gpu_id < num_gpus; gpu_id++) {
         cudaSetDevice(gpu_id);
         int id;
         cudaGetDevice(&id);
-        cudaMemGetInfo(&free, &total);
-        std::cout << "GPU " << id << " memory: free = " << free << ", total = " << total << std::endl;
+        cudaMemGetInfo(&free_mem, &total_mem);
+        std::cout << "GPU " << id << " memory: free = " << free_mem << ", total = " << total_mem << std::endl;
     }
 
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
