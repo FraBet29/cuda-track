@@ -317,7 +317,7 @@ __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int 
         int my_rand = (int) truncf(my_randf);
         bool keep = my_rand >= threshold;
         in[i] *= keep ? scale : 0;
-        if (mask) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
+        if (mask != NULL) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
     }
 }
 
@@ -336,12 +336,10 @@ void Dropout::forward(bool training) {
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "OK 1" << std::endl;
     // Launch kernel
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "OK 2" << std::endl;
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int)RAND() >= threshold;
