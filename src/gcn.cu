@@ -204,18 +204,18 @@ float GCN::get_l2_penalty() {
 */
 std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
-    //std::cout << "OK 1" << std::endl;
+    std::cout << "OK 1" << std::endl;
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
-    //std::cout << "OK 2" << std::endl;
+    std::cout << "OK 2" << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
-    //std::cout << "OK 3" << std::endl;
+    std::cout << "OK 3" << std::endl;
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
