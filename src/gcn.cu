@@ -71,7 +71,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var1 = &cuda_pointers.back();
-    std::cout << "dropout 1 allocated" << std::endl;
     
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
@@ -103,14 +102,15 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
 
     // dropout
+    std::cout << "dropout 2 allocation" << std::endl;
     modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
+    std::cout << "dropout 2 allocated" << std::endl;
     variables.emplace_back(params.num_nodes * params.output_dim);
     Variable *layer2_var1 = &variables.back();
     // Allocate GPU memory for the output of dropout
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
     float **layer2_cuda_var1 = &cuda_pointers.back();
-    std::cout << "dropout 2 allocated" << std::endl;
     
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
