@@ -256,32 +256,32 @@ CrossEntropyLoss::CrossEntropyLoss(Variable *logits, float** cuda_logits, int *t
 
 // IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY
 
-__global__ void crossentropyloss_forward_parallel1(float *truth, float *logits_data, float *logits_grad, float *loss, int *count, bool training, int N, int n) {
+__global__ void crossentropyloss_forward_parallel1(int *truth, float *logits_data, float *logits_grad, float *loss, int *count, bool training, int N, int n) {
     // N: logits->data.size(), n: num_classes
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N / n) {
         if (truth[i] >= 0) {
-            atomicAdd(&count, 1);
+            atomicAdd(&(*count), 1);
             float *logit = &logits_data[i * n];
             float max_logit = -1e30, sum_exp = 0;
             for (int j = 0; j < n; j++)
                 max_logit = fmaxf(max_logit, logit[j]);
-            for (int j = 0; j < num_classes; j++) {
+            for (int j = 0; j < n; j++) {
                 logit[j] -= max_logit;
                 sum_exp += expf(logit[j]);
             }
-            atomicAdd(&loss, logf(sum_exp) - logit[truth[i]]);
+            atomicAdd(&(*loss), logf(sum_exp) - logit[truth[i]]);
             if (training) {
                 for (int j = 0; j < n; j++) {
                     float prob = expf(logit[j]) / sum_exp;
                     logits_grad[i * n + j] = prob;
                 }
-                _synchthreads();
-                atomicAdd(logits_grad[i * n + truth[i]], -1.0);
+                _syncthreads();
+                atomicAdd(&logits_grad[i * n + truth[i]], -1.0);
             }
         }
     }
-    _synchthreads();
+    _syncthreads();
     if (i == 0)
         *loss /= *count;
 }
