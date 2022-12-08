@@ -305,6 +305,7 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
         check_call(cudaMalloc(&cuda_mask, 0));
     }
     // NULLPTR FOR CUDA POINTERS?
+    /*
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
@@ -314,6 +315,7 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
+    */
 }
 
 Dropout::~Dropout() {
@@ -324,11 +326,13 @@ Dropout::~Dropout() {
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
     size_t i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
+        /*
         float my_randf = rand_max * curand_uniform(&rand_state[i]);
         int my_rand = (int) truncf(my_randf);
         bool keep = my_rand >= threshold;
         in[i] *= keep ? scale : 0;
         if (mask) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
+        */
     }
 }
 
