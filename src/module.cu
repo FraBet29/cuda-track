@@ -294,16 +294,15 @@ void ReLU::backward() {
 */
 Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     this->in = in;
-    //this->cuda_in = cuda_in;
+    this->cuda_in = cuda_in;
     this->p = p;
     if (!in->grad.empty()) {
         mask = new int[in->data.size()];
-        //check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
+        check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
     }
     else {
         mask = nullptr;
     }
-    /*
     // NULLPTR FOR CUDA POINTERS?
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
@@ -314,12 +313,11 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
-    */
 }
 
 Dropout::~Dropout() {
     if (mask) delete[] mask;
-    //check_call(cudaFree(cuda_mask));
+    check_call(cudaFree(cuda_mask));
 }
 
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
