@@ -241,7 +241,7 @@ CrossEntropyLoss::CrossEntropyLoss(Variable *logits, float** cuda_logits, int *t
         logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
             float *temp_logits_data = (float *) malloc(logits->data.size() * sizeof(float));
             float *temp_logits_grad = (float *) malloc(logits->grad.size() * sizeof(float));
-            // EXTRACT RAW MALLOC DATA FROM VECTORS?
+            // EXTRACT RAW MALLOC DATA FROM VECTORS VIA VECTOR::DATA?
             for (size_t i = 0; i < logits->data.size(); ++i)
                 temp_logits_data[i] = logits->data[i];
             for (size_t i = 0; i < logits->grad.size(); ++i)

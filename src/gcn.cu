@@ -152,7 +152,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
     
     // cross entropy loss
-    modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, &cuda_loss, params.output_dim));
+    modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, &(*cuda_loss), params.output_dim));
 
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
