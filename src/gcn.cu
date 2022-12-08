@@ -115,7 +115,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // Allocate GPU memory for the output of dropout
     cuda_pointers.emplace_back();
     std::cout << "ok 2nd dropout add cuda pointer" << std::endl;
-    //check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
+    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
     std::cout << "ok 2nd dropout allocate cuda pointer" << std::endl;
     float **layer2_cuda_var1 = &cuda_pointers.back();
     std::cout << "ok after 2nd dropout" << std::endl;

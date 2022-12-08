@@ -73,11 +73,11 @@ public:
 
 class Dropout: public Module {
     Variable *in;
-    float **cuda_in;
+    //float **cuda_in;
     int *mask;
-    int *cuda_mask;
+    //int *cuda_mask;
     float p;
-    curandState *cuda_rand_state;
+    //curandState *cuda_rand_state;
 public:
     Dropout(Variable *in, float **cuda_in, float p);
     ~Dropout();

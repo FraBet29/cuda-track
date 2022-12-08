@@ -298,11 +298,12 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     this->p = p;
     if (!in->grad.empty()) {
         mask = new int[in->data.size()];
-        check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
+        //check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
     }
     else {
         mask = nullptr;
     }
+    /*
     // NULLPTR FOR CUDA POINTERS?
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
@@ -313,11 +314,12 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
+    */
 }
 
 Dropout::~Dropout() {
     if (mask) delete[] mask;
-    check_call(cudaFree(cuda_mask));
+    //check_call(cudaFree(cuda_mask));
 }
 
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
@@ -336,6 +338,7 @@ void Dropout::forward(bool training) {
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
     float scale = 1 / (1 - p);
+    /*
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024; // must be the same value as the value used in the constructor
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
@@ -344,13 +347,12 @@ void Dropout::forward(bool training) {
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
-    /*
+    */
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int)RAND() >= threshold;
         in->data[i] *= keep ? scale : 0;
         if (mask) mask[i] = keep;
     }
-    */
     timer_stop(TMR_DROPOUT_FW);
 }
 
