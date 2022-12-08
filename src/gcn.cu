@@ -124,7 +124,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
         int id;
         cudaGetDevice(&id);
         cudaMemGetInfo(&free, &total);
-        cout << "GPU " << id << " memory: free = " << free << ", total = " << total << endl;
+        std::cout << "GPU " << id << " memory: free = " << free << ", total = " << total << std::endl;
     }
 
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
@@ -143,7 +143,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     float *temp1 = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
     for (std::size_t i = 0; i < params.hidden_dim * params.output_dim; ++i)
         temp1[i] = layer2_weight->data[i];
-    check_call(cudaMemcpy(cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(&cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp1);
     
     // matmul
