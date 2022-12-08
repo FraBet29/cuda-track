@@ -302,6 +302,10 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     }    
     else mask = nullptr;
     // NULLPTR FOR CUDA POINTERS?
+    // GPU blocks and threads settings
+    const unsigned int max_num_threads = 1024;
+    dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Initialize CUDA random
     cudaMalloc(&cuda_rand_state, in->data.size() * sizeof(curandState));
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
@@ -332,7 +336,7 @@ void Dropout::forward(bool training) {
     const int threshold = int(p * MY_RAND_MAX);
     float scale = 1 / (1 - p);
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024;
+    const unsigned int max_num_threads = 1024; // must be the same value as the value used in the constructor
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
