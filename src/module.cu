@@ -307,11 +307,12 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Initialize CUDA random
-    cudaMalloc(&cuda_rand_state, in->data.size() * sizeof(curandState));
+    check_call(cudaMalloc(&cuda_rand_state, in->data.size() * sizeof(curandState)));
+    std::cout << "OK 1" << std::endl;
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "OK 1" << std::endl;
+    std::cout << "OK 2" << std::endl;
 }
 
 Dropout::~Dropout() {
@@ -331,6 +332,7 @@ __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int 
 }
 
 void Dropout::forward(bool training) {
+    std::cout << "OK 3" << std::endl;
     if (!training) return;
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
@@ -343,7 +345,7 @@ void Dropout::forward(bool training) {
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "OK 2" << std::endl;
+    std::cout << "OK 4" << std::endl;
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int)RAND() >= threshold;
