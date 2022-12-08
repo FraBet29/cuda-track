@@ -276,12 +276,12 @@ __global__ void crossentropyloss_forward_parallel1(int *truth, float *logits_dat
                     float prob = expf(logit[j]) / sum_exp;
                     logits_grad[i * n + j] = prob;
                 }
-                _syncthreads();
+                __syncthreads();
                 atomicAdd(&logits_grad[i * n + truth[i]], -1.0);
             }
         }
     }
-    _syncthreads();
+    __syncthreads();
     if (i == 0)
         *loss /= *count;
 }
