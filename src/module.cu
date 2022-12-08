@@ -302,6 +302,12 @@ Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     }    
     else mask = nullptr;
     // NULLPTR FOR CUDA POINTERS?
+    // Initialize CUDA random
+    cudaMalloc(&cuda_rand_state, in->data.size() * sizeof(curandState));
+    setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    std::cout << "OK 1" << std::endl;
 }
 
 Dropout::~Dropout() {
@@ -309,10 +315,10 @@ Dropout::~Dropout() {
     check_call(cudaFree(cuda_mask));
 }
 
-__global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *state, unsigned rand_max) {
+__global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
     size_t i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
-        float my_randf = rand_max * curand_uniform(state, i);
+        float my_randf = rand_max * curand_uniform(&rand_state[i]);
         int my_rand = (int) truncf(my_randf);
         bool keep = my_rand >= threshold;
         in[i] *= keep ? scale : 0;
@@ -329,15 +335,8 @@ void Dropout::forward(bool training) {
     const unsigned int max_num_threads = 1024;
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
-    // Initialize CUDA random
-    curandState *state;
-    cudaMalloc(&state, in->data.size() * sizeof(curandState));
-    setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);
-    check_kernel_call();
-    cudaDeviceSynchronize();
-    std::cout << "OK 1" << std::endl;
     // Launch kernel
-    dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, state, MY_CUDA_RAND_MAX);
+    dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
     std::cout << "OK 2" << std::endl;
