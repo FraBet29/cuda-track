@@ -314,9 +314,9 @@ __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int 
     if (i < N) {
         float my_randf = rand_max * curand_uniform(&state[i]);
         int my_rand = (int) truncf(my_randf);
-        bool keep = my_rand >= threshold;
-        in[i] *= keep ? scale : 0;
-        if (mask) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
+        //bool keep = my_rand >= threshold;
+        //in[i] *= keep ? scale : 0;
+        //if (mask) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
     }
 }
 
