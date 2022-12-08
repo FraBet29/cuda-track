@@ -330,14 +330,18 @@ void Dropout::forward(bool training) {
     const unsigned int max_num_threads = 1024;
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
-    // CUDA random settings
+    // Initialize CUDA random
     curandState *state;
     cudaMalloc(&state, sizeof(curandState));
-    setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);    
+    setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    std::cout << "OK 1" << std::endl;
     // Launch kernel
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
+    std::cout << "OK 2" << std::endl;
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int)RAND() >= threshold;
