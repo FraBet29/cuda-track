@@ -38,10 +38,12 @@ public:
 
 class GraphSum: public Module {
     Variable *in, *out;
+    float **cuda_in, **cuda_out;
     SparseIndex *graph;
+    int *cuda_graph_indptr, *cuda_graph_indices;
     int dim;
 public:
-    GraphSum(Variable *in, Variable *out, SparseIndex *graph, int dim);
+    GraphSum(Variable *in, Variable *out, float **cuda_in, float **cuda_out, SparseIndex *graph, int dim);
     ~GraphSum() {}
     void forward(bool);
     void backward();

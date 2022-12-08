@@ -100,7 +100,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
 
     std::cout << "ok before graphsum" << std::endl;
     // graphsum
-    modules.push_back(new GraphSum(layer1_var1, layer1_var2, &data->graph, params.hidden_dim));
+    modules.push_back(new GraphSum(layer1_var1, layer1_var2, layer1_cuda_var1, layer1_cuda_var2, &data->graph, params.hidden_dim));
     
     std::cout << "ok before relu" << std::endl;
     // RELU
@@ -146,7 +146,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_output = &cuda_pointers.back();
     
     // graph sum
-    modules.push_back(new GraphSum(layer2_var1, output, &data->graph, params.output_dim));
+    modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
     truth = std::vector<int>(params.num_nodes);
     
     // cross entropy loss
