@@ -59,7 +59,7 @@ class CrossEntropyLoss: public Module {
     float **cuda_loss;
     int num_classes;
 public:
-    CrossEntropyLoss(Variable *logits, float **cuda_logits, int *truth, int *cuda_truth, float *loss, int num_classes);
+    CrossEntropyLoss(Variable *logits, float **cuda_logits, int *truth, int *cuda_truth, float *loss, float **cuda_loss, int num_classes);
     ~CrossEntropyLoss() {}
     void forward(bool);
     void backward();
