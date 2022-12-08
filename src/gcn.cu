@@ -64,7 +64,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_input = &cuda_pointers.back();
 
     // dropout
-    modules.push_back(new Dropout(input, params.dropout));
+    modules.push_back(new Dropout(input, cuda_input, params.dropout));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
     Variable *layer1_var1 = &variables.back();
     // Allocate GPU memory for the output of dropout
@@ -102,7 +102,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
 
     // dropout
-    modules.push_back(new Dropout(layer1_var2, params.dropout));
+    modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
     variables.emplace_back(params.num_nodes * params.output_dim);
     Variable *layer2_var1 = &variables.back();
     // Allocate GPU memory for the output of dropout
