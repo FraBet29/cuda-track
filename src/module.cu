@@ -294,7 +294,7 @@ void ReLU::backward() {
 */
 Dropout::Dropout(Variable *in, float **cuda_in, float p) {
     this->in = in;
-    this->cuda_in = cuda_in;
+    //this->cuda_in = cuda_in;
     this->p = p;
     if (!in->grad.empty()) {
         mask = new int[in->data.size()];
