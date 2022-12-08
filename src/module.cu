@@ -335,10 +335,12 @@ void Dropout::forward(bool training) {
     setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(state);
     check_kernel_call();
     cudaDeviceSynchronize();
+    std::cout << "OK 1" << std::endl;
     // Launch kernel
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
+    std::cout << "OK 2" << std::endl;
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int)RAND() >= threshold;
