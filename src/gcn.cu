@@ -162,7 +162,7 @@ void GCN::set_truth(int current_split) {
 
 void GCN::set_cuda_truth() {
     int *temp = truth.data();
-    check_call(cudaMemcpy(&cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
 }
 
 // get the current accuracy of the model
