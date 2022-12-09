@@ -161,7 +161,7 @@ void GCN::set_truth(int current_split) {
 }
 
 void GCN::set_cuda_truth() {
-    float *temp = truth.data();
+    int *temp = truth.data();
     check_call(cudaMemcpy(&cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
 }
 
