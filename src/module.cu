@@ -10,12 +10,8 @@
 /**
  * Dense matrix multiplication layer. 
 */
-Matmul::Matmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, int m, int n, int p) : 
-        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {
-            check_call(cudaMalloc(&cuda_a_grad, a->grad.size() * sizeof(float)));
-            check_call(cudaMalloc(&cuda_b_grad, b->grad.size() * sizeof(float)));
-            check_call(cudaMalloc(&cuda_c_grad, c->grad.size() * sizeof(float)));
-        }
+Matmul::Matmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p) : 
+        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
 __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
@@ -121,24 +117,18 @@ void Matmul::backward() {
 /**
  * A sparse matrix multiplication layer.
 */
-SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p) :
+SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
-            int *temp_indptr = (int *) malloc(sp->indptr.size() * sizeof(int));
-            int *temp_indices = (int *) malloc(sp->indices.size() * sizeof(int));
-            for (size_t i = 0; i < sp->indptr.size(); ++i)
-                temp_indptr[i] = sp->indptr[i];
-            for (size_t i = 0; i < sp->indices.size(); ++i)
-                temp_indices[i] = sp->indices[i];
-            check_call(cudaMalloc(&cuda_sp_indptr, sp->indptr.size() * sizeof(int)));
-            check_call(cudaMalloc(&cuda_sp_indices, sp->indices.size() * sizeof(int)));
-            check_call(cudaMemcpy(cuda_sp_indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
-            check_call(cudaMemcpy(cuda_sp_indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
-            free(temp_indptr);
-            free(temp_indices);
+            int *temp_indptr = sp->indptr.data();
+            int *temp_indices = sp->indices.data();
+            check_call(cudaMalloc(&cuda_sp->indptr, sp->indptr.size() * sizeof(int)));
+            check_call(cudaMalloc(&cuda_sp->indices, sp->indices.size() * sizeof(int)));
+            check_call(cudaMemcpy(cuda_sp->indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(cuda_sp->indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
         }
 
 
-// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY
+// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY FOR SPARSE INDEX
 
 __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int p, int N) {
     size_t i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -192,23 +182,17 @@ void SparseMatmul::backward() {
 /**
  * A specialized sparse matrix multiplication for graphs.
 */
-GraphSum::GraphSum(Variable *in, Variable *out, float **cuda_in, float ** cuda_out, SparseIndex *graph, int dim) :
+GraphSum::GraphSum(Variable *in, Variable *out, CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim) :
         in(in), out(out), cuda_in(cuda_in), cuda_out(cuda_out), graph(graph), dim(dim) {
-            int *temp_indptr = (int *) malloc(graph->indptr.size() * sizeof(int));
-            int *temp_indices = (int *) malloc(graph->indices.size() * sizeof(int));
-            for (size_t i = 0; i < graph->indptr.size(); ++i)
-                temp_indptr[i] = graph->indptr[i];
-            for (size_t i = 0; i < graph->indices.size(); ++i)
-                temp_indices[i] = graph->indices[i];
-            check_call(cudaMalloc(&cuda_graph_indptr, graph->indptr.size() * sizeof(int)));
-            check_call(cudaMalloc(&cuda_graph_indices, graph->indices.size() * sizeof(int)));
-            check_call(cudaMemcpy(cuda_graph_indptr, temp_indptr, graph->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
-            check_call(cudaMemcpy(cuda_graph_indices, temp_indices, graph->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
-            free(temp_indptr);
-            free(temp_indices);
+            int *temp_indptr = graph->indptr.data();
+            int *temp_indices = graph->indices.data();
+            check_call(cudaMalloc(&cuda_graph->indptr, graph->indptr.size() * sizeof(int)));
+            check_call(cudaMalloc(&cuda_graph->indices, graph->indices.size() * sizeof(int)));
+            check_call(cudaMemcpy(cuda_graph->indptr, temp_indptr, graph->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
+            check_call(cudaMemcpy(cuda_graph->indices, temp_indices, graph->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
         }
 
-// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY
+// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY FOR SPARSE INDEX
 
 __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, int *indices, int dim, int N) {
     size_t src = threadIdx.x + blockIdx.x * blockDim.x;
@@ -273,22 +257,10 @@ void GraphSum::backward() {
  * Each predicted class probability is compared to the actual class desired and a loss is computed to penalize the proabability based on how far it is with respect to the actual expected value.
  * Also called logaritmic loss. 
 */
-CrossEntropyLoss::CrossEntropyLoss(Variable *logits, float** cuda_logits, int *truth, int *cuda_truth, float *loss, float **cuda_loss, int num_classes) :
+CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
         logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
             /*
-            float *temp_logits_data = (float *) malloc(logits->data.size() * sizeof(float));
-            float *temp_logits_grad = (float *) malloc(logits->grad.size() * sizeof(float));
-            // EXTRACT RAW MALLOC DATA FROM VECTORS VIA VECTOR::DATA?
-            for (size_t i = 0; i < logits->data.size(); ++i)
-                temp_logits_data[i] = logits->data[i];
-            for (size_t i = 0; i < logits->grad.size(); ++i)
-                temp_logits_grad[i] = logits->grad.size();
-            check_call(cudaMalloc(&cuda_logits_data, logits->data.size() * sizeof(float)));
-            check_call(cudaMalloc(&(*cuda_logits_grad), logits->grad.size() * sizeof(float)));
-            check_call(cudaMemcpy(cuda_logits_data, temp_logits_data, logits->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-            check_call(cudaMemcpy(*cuda_logits_grad, temp_logits_grad, logits->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
-            free(temp_logits_data);
-            free(temp_logits_grad);      
+            ???   
             */       
         }
 
@@ -389,7 +361,7 @@ void CrossEntropyLoss::backward() {
  * Rectified Linear Unit activation function.
  * If input is negative it will output 0.
 */
-ReLU::ReLU(Variable *in, float **cuda_in) {
+ReLU::ReLU(Variable *in, CudaVariable *cuda_in) {
     this->in = in;
     this->cuda_in = cuda_in;
     mask = new bool[in->data.size()];
@@ -443,7 +415,7 @@ void ReLU::backward() {
  * The dropout layer randomly sets input units to 0 with a frequency of P at each step during training time to prevent overfitting. 
  * Inputs that are not set to 0 are scaled up by 1/(1-P).
 */
-Dropout::Dropout(Variable *in, float **cuda_in, float p) {
+Dropout::Dropout(Variable *in, CudaVariable *cuda_in, float p) {
     this->in = in;
     this->cuda_in = cuda_in;
     this->p = p;

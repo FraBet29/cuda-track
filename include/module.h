@@ -3,7 +3,9 @@
 //#include <immintrin.h>
 #include "variable.h"
 #include "sparse.h"
+#include "cuda_variable.h"
 #include "cuda_rand.h"
+#include "cuda_sparse.h"
 
 class Module {
 public:
@@ -14,11 +16,10 @@ public:
 
 class Matmul: public Module {
     Variable *a, *b, *c;
-    float **cuda_a, **cuda_b, **cuda_c;
-    float *cuda_a_grad, *cuda_b_grad, *cuda_c_grad;
+    CudaVariable *cuda_a, *cuda_b, *cuda_c;
     int m, n, p;
 public:
-    Matmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, int m, int n, int p);
+    Matmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p);
     ~Matmul() {};
     void forward(bool);
     void backward();
@@ -26,12 +27,12 @@ public:
 
 class SparseMatmul: public Module {
     Variable *a, *b, *c;
-    float **cuda_a, **cuda_b, **cuda_c;
+    CudaVariable *cuda_a, *cuda_b, *cuda_c;
     SparseIndex *sp;
-    int *cuda_sp_indptr, *cuda_sp_indices;
+    CudaSparseIndex *cuda_sp;
     int m, n, p;
 public:
-    SparseMatmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, SparseIndex *sp, int m, int n, int p);
+    SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p);
     ~SparseMatmul() {}
     void forward(bool);
     void backward();
@@ -39,12 +40,12 @@ public:
 
 class GraphSum: public Module {
     Variable *in, *out;
-    float **cuda_in, **cuda_out;
+    CudaVariable *cuda_in, *cuda_out;
     SparseIndex *graph;
-    int *cuda_graph_indptr, *cuda_graph_indices;
+    CudaSparseIndex *cuda_graph;
     int dim;
 public:
-    GraphSum(Variable *in, Variable *out, float **cuda_in, float **cuda_out, SparseIndex *graph, int dim);
+    GraphSum(Variable *in, Variable *out, CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim);
     ~GraphSum() {}
     void forward(bool);
     void backward();
@@ -52,15 +53,14 @@ public:
 
 class CrossEntropyLoss: public Module {
     Variable *logits;
-    float **cuda_logits, **cuda_logits_grad;
-    float *cuda_logits_data;
+    CudaVariable *cuda_logits;
     int *truth;
     int *cuda_truth;
     float *loss;
     float *cuda_loss;
     int num_classes;
 public:
-    CrossEntropyLoss(Variable *logits, float **cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes);
+    CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes);
     ~CrossEntropyLoss() {}
     void forward(bool);
     void backward();
@@ -68,11 +68,11 @@ public:
 
 class ReLU: public Module {
     Variable *in;
-    float **cuda_in;
+    CudaVariable *cuda_in;
     bool *mask;
     bool *cuda_mask;
 public:
-    ReLU(Variable *in, float **cuda_in);
+    ReLU(Variable *in, CudaVariable *cuda_in);
     ~ReLU();
     void forward(bool);
     void backward();
@@ -80,13 +80,13 @@ public:
 
 class Dropout: public Module {
     Variable *in;
-    float **cuda_in;
+    CudaVariable *cuda_in;
     int *mask;
     int *cuda_mask;
     float p;
     //curandState *cuda_rand_state;
 public:
-    Dropout(Variable *in, float **cuda_in, float p);
+    Dropout(Variable *in, CudaVariable *cuda_in, float p);
     ~Dropout();
     void forward(bool);
     void backward();

@@ -181,15 +181,12 @@ float GCN::get_accuracy() {
 
 // reduce the likelihood of model overfitting by using l2 regularization
 float GCN::get_l2_penalty() {
-    /*
     float l2 = 0;
     for (int i = 0; i < variables[2].data.size(); i++) {
         float x = variables[2].data[i];
         l2 += x * x;
     }
     return params.weight_decay * l2 / 2;
-    */
-   return 0;
 }
 
 /**
