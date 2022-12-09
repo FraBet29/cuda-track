@@ -24,26 +24,7 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
             C[index] += A[i * n + k] * B[k * p + j];
     }
     /*
-    // Tile-based multiplication of matrices A and B; the result is stored in the matrix C
-    extern __shared__ float sblock[]; // sblock will contain the tile of A, followed by the tile of B
-    int i = threadIdx.x + blockIdx.x * blockDim.x; // index of the i-th row of C
-    int j = threadIdx.y + blockIdx.y * blockDim.y; // index of the j-th column of C
-    if (i < m && j < p) {   
-        int tx = threadIdx.x;
-        int ty = threadIdx.y;
-        int dim = blockDim.x;
-        // Tile of A transfer from global to shared memory
-        for (std::size_t k = 0; k < n; k += dim) // slide horizontally through the tile of A by blocks of size (dim, dim)
-            sblock[tx * n + k + ty] = A[i * n + k + ty]; // sblock[tx][k + ty], A[i][k + ty]
-        // Tile of B transfer from global to shared memory (we must consider an offset of dim * n in sblock not to overwrite the memory occupied by the tile of A)
-        for (std::size_t k = 0; k < n; k += dim) // slide vertically through the tile of B by blocks of size (dim, dim)
-            sblock[dim * n + (k + tx) * dim + ty] = B[(k + tx) * p + j]; // sblock[k + tx][ty], B[k + tx][j]
-        __syncthreads();
-        int index = i * p + j;
-        C[index] = 0.0f;
-        for (std::size_t k = 0; k < n; ++k)
-            C[index] += sblock[tx * n + k] * sblock[dim * n + k * dim + ty]; // sblock[tx][k] * sblock[k][ty]
-    }
+    // Tile-based multiplication?
     */
 }
 
@@ -51,13 +32,12 @@ void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
     c->zero();
     // GPU blocks and threads settings
-    // Each block will be associated to a shared memory area containing a tile of A and a tile of B of size (tile_size, n) and (n, tile_size) respectively
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
     const unsigned int tile_size = 32;
     dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (p + tile_size - 1) / tile_size, 1);
     dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
     // Launch kernel
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, 2 * tile_size * n * sizeof(float)>>>(*cuda_a, *cuda_b, *cuda_c, m, n, p);
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
@@ -94,7 +74,7 @@ void Matmul::backward() {
     dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (n + tile_size - 1) / tile_size, 1);
     dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
     // Launch kernel
-    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a_grad, *cuda_b_grad, *cuda_c_grad, m, n, p);
+    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, *cuda_b->grad, *cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
@@ -150,7 +130,7 @@ void SparseMatmul::forward(bool training) {
     dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
-    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a, *cuda_b, *cuda_c, cuda_sp_indptr, cuda_sp_indices, p, sp->indptr.size() - 1);
+    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, p, sp->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
@@ -218,7 +198,7 @@ void GraphSum::forward(bool training) {
     dim3 blocksPerGrid((graph->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
-    graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, *cuda_out, cuda_graph_indptr, cuda_graph_indices, dim, graph->indptr.size() - 1);
+    graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, dim, graph->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
@@ -389,7 +369,7 @@ void ReLU::forward(bool training) {
     dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
     // Launch kernel
-    relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), training);
+    relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), training);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
