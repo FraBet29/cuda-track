@@ -1,5 +1,9 @@
 #ifndef CUDA_VARIABLE_H
 
+__global__ void zero_parallel(float *data, int size);
+__device__ float warp_reduce(float val);
+__global__ void grad_norm_parallel(int *in, int *out, int size);
+
 struct CudaVariable {
     float *data, *grad;
     int size;

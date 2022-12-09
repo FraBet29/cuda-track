@@ -33,26 +33,33 @@ void CudaVariable::glorot(int in_size, int out_size) {
     free(temp_data);
 }
 
-__global__ void zero(float *data, int size) {
+__global__ void zero_parallel(float *data, int size) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < size)
         data[i] = 0.0f;
 }
 
 void CudaVariable::zero() {
-    zero<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(data, size);
+    zero_parallel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(data, size);
     check_kernel_call();
     cudaDeviceSynchronize();
 }
 
 void CudaVariable::zero_grad() {
-    zero<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(grad, size);
+    zero_parallel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(grad, size);
     check_kernel_call();
     cudaDeviceSynchronize();
 }
 
 // Reduction via warps
-__global__ void grad_norm(int *in, int *out, int size) {
+__device__ float warp_reduce(float val) {
+    int warp_size = 32;
+    for (int offset = warp_size / 2; offset > 0; offset /= 2)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+
+__global__ void grad_norm_parallel(int *in, int *out, int size) {
     int warp_size = 32;
     float sum = float(0);
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x)
@@ -66,7 +73,7 @@ float CudaVariable::grad_norm() {
     float norm;
     float *cuda_norm;
     check_call(cudaMalloc(&cuda_norm, sizeof(float)));
-    grad_norm<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(grad, cuda_norm, size);
+    grad_norm_parallel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(grad, cuda_norm, size);
     check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(norm, cuda_norm, sizeof(float), cudaMemcpyDeviceToHost));
