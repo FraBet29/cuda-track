@@ -4,8 +4,8 @@ CXX=nvcc
 CXXFLAGS=-O3
 LDFLAGS=-lm -lstdc++
 
-CXXFILES=src/gcn.cu src/optim.cpp src/module.cu src/variable.cpp src/parser.cpp src/rand.cpp src/timer.cpp src/cuda_check.cu src/cuda_rand.cu
-HFILES=include/gcn.h include/optim.h include/module.h include/variable.h include/sparse.h include/parser.h include/rand.h include/timer.h include/cuda_check.h include/cuda_rand.h
+CXXFILES=src/gcn.cu src/optim.cpp src/module.cu src/variable.cpp src/parser.cpp src/rand.cpp src/timer.cpp src/cuda_check.cu src/cuda_rand.cu src/cuda_variable.cu
+HFILES=include/gcn.h include/optim.h include/module.h include/variable.h include/sparse.h include/parser.h include/rand.h include/timer.h include/cuda_check.h include/cuda_rand.h include/cuda_variable.h
 
 
 all: gcn-seq
