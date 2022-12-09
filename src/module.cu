@@ -29,6 +29,7 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
 }
 
 void Matmul::forward(bool training) {
+    std::cout << "Executing matmul" << std::endl;
     timer_start(TMR_MATMUL_FW);
     c->zero();
     // GPU blocks and threads settings
@@ -48,6 +49,7 @@ void Matmul::forward(bool training) {
         }
     */
     timer_stop(TMR_MATMUL_FW);
+    std::cout << "Matmul executed" << std::endl;
 }
 
 __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, int n, int p) {
@@ -125,6 +127,7 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
 }
 
 void SparseMatmul::forward(bool training) {
+    std::cout << "Executing sparsematmul" << std::endl;
     timer_start(TMR_SPMATMUL_FW);
     c->zero();
     // GPU blocks and threads settings
@@ -144,6 +147,7 @@ void SparseMatmul::forward(bool training) {
         }
     */
     timer_stop(TMR_SPMATMUL_FW);
+    std::cout << "Sparsematmul executed" << std::endl;
 }
 
 void SparseMatmul::backward() {
@@ -195,6 +199,7 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
 }
 
 void GraphSum::forward(bool training) {
+    std::cout << "Executing graphsum" << std::endl;
     timer_start(TMR_GRAPHSUM_FW);
     out->zero();
     // GPU blocks and threads settings
@@ -218,6 +223,7 @@ void GraphSum::forward(bool training) {
         }
     */
     timer_stop(TMR_GRAPHSUM_FW);
+    std::cout << "Graphsum executed" << std::endl;
 }
 
 void GraphSum::backward() {
@@ -287,6 +293,7 @@ __global__ void crossentropyloss_forward_parallel2(float *logits_grad, int *coun
 }
 
 void CrossEntropyLoss::forward(bool training) {
+    std::cout << "Executing cross entropy loss" << std::endl;
     timer_start(TMR_LOSS_FW);
     float total_loss = 0;
     int count = 0;
@@ -334,6 +341,7 @@ void CrossEntropyLoss::forward(bool training) {
         for (float & i : logits->grad)
             i /= count;
     timer_stop(TMR_LOSS_FW);
+    std::cout << "Cross entropy loss executed" << std::endl;
 }
 
 void CrossEntropyLoss::backward() {
@@ -367,6 +375,7 @@ __global__ void relu_forward_parallel(float *in, bool *mask, int N, bool trainin
 }
 
 void ReLU::forward(bool training) {
+    std::cout << "Executing relu" << std::endl;
     timer_start(TMR_RELU_FW);
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
@@ -384,6 +393,7 @@ void ReLU::forward(bool training) {
     }
     */
     timer_stop(TMR_RELU_FW);
+    std::cout << "Relu executed" << std::endl;
 }
 
 void ReLU::backward() {
@@ -441,6 +451,7 @@ __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int 
 }
 
 void Dropout::forward(bool training) {
+    std::cout << "Executing dropout" << std::endl;
     if (!training) return;
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
@@ -461,6 +472,7 @@ void Dropout::forward(bool training) {
         if (mask) mask[i] = keep;
     }
     timer_stop(TMR_DROPOUT_FW);
+    std::cout << "Dropout executed" << std::endl;
 }
 
 void Dropout::backward() {
