@@ -299,6 +299,7 @@ void CrossEntropyLoss::forward(bool training) {
     int *cuda_count;
     check_call(cudaMalloc(&cuda_count, sizeof(int)));
     if (training) logits->zero_grad();
+    /*
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
     dim3 blocksPerGrid1((logits->data.size() / num_classes + max_num_threads - 1) / max_num_threads, 1, 1);
@@ -312,7 +313,7 @@ void CrossEntropyLoss::forward(bool training) {
         crossentropyloss_forward_parallel2<<<blocksPerGrid2, threadsPerBlock>>>(*cuda_logits_grad, cuda_count, logits->grad.size());
     }
     check_call(cudaFree(cuda_count));
-    /*
+    */
     for (int i = 0; i < logits->data.size() / num_classes; i++) {
         if (truth[i] < 0) continue;
         count++;
@@ -338,7 +339,6 @@ void CrossEntropyLoss::forward(bool training) {
     if (training)
         for (float & i : logits->grad)
             i /= count;
-    */
     timer_stop(TMR_LOSS_FW);
 }
 

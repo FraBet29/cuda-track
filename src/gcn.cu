@@ -63,7 +63,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), data->feature_index.indices.size() * sizeof(float)));
     cuda_input = &cuda_pointers.back();
-    std::cout << "ok before dropout" << std::endl;
 
     // dropout
     modules.push_back(new Dropout(input, cuda_input, params.dropout));
@@ -73,7 +72,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var1 = &cuda_pointers.back();
-    std::cout << "ok after 1st dropout" << std::endl;
     
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
@@ -89,7 +87,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMemcpy(cuda_pointers.back(), temp0, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp0);
     
-    std::cout << "ok before sparsematmul" << std::endl;
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
     variables.emplace_back(params.num_nodes * params.hidden_dim);
@@ -99,27 +96,20 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
     float **layer1_cuda_var2 = &cuda_pointers.back();
 
-    std::cout << "ok before graphsum" << std::endl;
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, layer1_cuda_var1, layer1_cuda_var2, &data->graph, params.hidden_dim));
     
-    std::cout << "ok before relu" << std::endl;
     // RELU
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
 
-    std::cout << "ok before 2nd dropout" << std::endl;
     // dropout
     modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
     variables.emplace_back(params.num_nodes * params.output_dim);
     Variable *layer2_var1 = &variables.back();
-    std::cout << "ok 2nd dropout cpu part" << std::endl;
     // Allocate GPU memory for the output of dropout
     cuda_pointers.emplace_back();
-    std::cout << "ok 2nd dropout add cuda pointer" << std::endl;
     check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
-    std::cout << "ok 2nd dropout allocate cuda pointer" << std::endl;
     float **layer2_cuda_var1 = &cuda_pointers.back();
-    std::cout << "ok after 2nd dropout" << std::endl;
     
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
@@ -127,7 +117,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     // Allocate GPU memory for W(1)
     cuda_pointers.emplace_back();
     check_call(cudaMalloc(&cuda_pointers.back(), params.hidden_dim * params.output_dim * sizeof(float)));
-    std::cout << "uff" << std::endl;
     float **layer2_cuda_weight = &cuda_pointers.back();
     // Initialize W(1)
     float *temp1 = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
@@ -135,7 +124,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
         temp1[i] = layer2_weight->data[i];
     check_call(cudaMemcpy(cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
     free(temp1);
-    std::cout << "uff uff" << std::endl;
     
     // matmul
     modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
@@ -151,6 +139,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
     
+    // !!!
     // cross entropy loss
     modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, &(*cuda_loss), params.output_dim));
 
