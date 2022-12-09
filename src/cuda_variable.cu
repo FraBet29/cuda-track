@@ -65,7 +65,7 @@ __global__ void grad_norm_parallel(float *in, float *out, int size) {
         sum += in[i] * in[i];
     sum = warp_reduce(sum);
     if ((threadIdx.x & (warp_size - 1)) == 0)
-        atomicAdd(&out, sum);
+        atomicAdd(out, sum);
 }
 
 float CudaVariable::grad_norm() {
