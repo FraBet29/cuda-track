@@ -7,7 +7,6 @@
 
 #define MAX_NUM_THREADS 1024
 
-
 CudaVariable::CudaVariable(int size, bool requires_grad, bool thread_local_grad): size(size) {
     check_call(cudaMalloc(&data, size * sizeof(float)));
     if (requires_grad)
@@ -59,14 +58,14 @@ __device__ float warp_reduce(float val) {
     return val;
 }
 
-__global__ void grad_norm_parallel(int *in, int *out, int size) {
+__global__ void grad_norm_parallel(float *in, float *out, int size) {
     int warp_size = 32;
     float sum = float(0);
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x)
         sum += in[i] * in[i];
     sum = warp_reduce(sum);
     if ((threadIdx.x & (warp_size - 1)) == 0)
-        atomicAdd(out, sum);
+        atomicAdd(&out, sum);
 }
 
 float CudaVariable::grad_norm() {
