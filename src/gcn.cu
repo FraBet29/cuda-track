@@ -55,93 +55,63 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     this->params = params;
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
-    variables.reserve(8);
-    cuda_pointers.reserve(8);
-    variables.emplace_back(data->feature_index.indices.size(), false);
-    input = &variables.back();
-    // Allocate GPU memory for the input matrix X
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), data->feature_index.indices.size() * sizeof(float)));
-    cuda_input = &cuda_pointers.back();
+    cuda_variables.reserve(8);
+    cuda_variables.emplace_back(data->feature_index.indices.size(), false);
+    cuda_input = &cuda_variables.back();
+    std::cout << "Input initialized." << std::endl;
 
     // dropout
     modules.push_back(new Dropout(input, cuda_input, params.dropout));
-    variables.emplace_back(params.num_nodes * params.hidden_dim);
-    Variable *layer1_var1 = &variables.back();
-    // Allocate GPU memory for the output of dropout
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
-    float **layer1_cuda_var1 = &cuda_pointers.back();
+    cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
+    CudaVariable *layer1_cuda_var1 = &cuda_variables.back();
+    std::cout << "Dropout (1st layer) initialized." << std::endl;
     
-    variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
-    Variable *layer1_weight = &variables.back();
-    layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
-    // Allocate GPU memory for W(0)
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), params.input_dim * params.hidden_dim * sizeof(float)));
-    float **layer1_cuda_weight = &cuda_pointers.back();
-    // Initialize W(0)
-    float *temp0 = (float *) malloc(params.input_dim * params.hidden_dim * sizeof(float));
-    for (std::size_t i = 0; i < params.input_dim * params.hidden_dim; ++i)
-        temp0[i] = layer1_weight->data[i];
-    check_call(cudaMemcpy(cuda_pointers.back(), temp0, params.input_dim * params.hidden_dim * sizeof(float), cudaMemcpyHostToDevice));
-    free(temp0);
+    cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
+    CudaVariable *layer1_cuda_weight = &cuda_variables.back();
+    layer1_cuda_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
+    std::cout << "W(0) initialized." << std::endl;
     
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
-    variables.emplace_back(params.num_nodes * params.hidden_dim);
-    Variable *layer1_var2 = &variables.back();
-    // Allocate GPU memory for the output of sparsematmul
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.hidden_dim * sizeof(float)));
-    float **layer1_cuda_var2 = &cuda_pointers.back();
+    cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
+    CudaVariable *layer1_cuda_var2 = &cuda_variables.back();
+    std::cout << "Sparsematmul initialized." << std::endl;
 
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, layer1_cuda_var1, layer1_cuda_var2, &data->graph, params.hidden_dim));
-    
-    // RELU
+    std::cout << "Graphsum (1st layer) initialized." << std::endl;
+
+    // ReLU
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
+    std::cout << "ReLU initialized." << std::endl;
 
     // dropout
     modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
-    variables.emplace_back(params.num_nodes * params.output_dim);
-    Variable *layer2_var1 = &variables.back();
-    // Allocate GPU memory for the output of dropout
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
-    float **layer2_cuda_var1 = &cuda_pointers.back();
+    cuda_variables.emplace_back(params.num_nodes * params.output_dim);
+    CudaVariable *layer2_cuda_var1 = &cuda_variables.back();
+    std::cout << "Dropout (2nd layer) initialized." << std::endl;
     
-    variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
-    Variable *layer2_weight = &variables.back();
-    layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
-    // Allocate GPU memory for W(1)
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), params.hidden_dim * params.output_dim * sizeof(float)));
-    float **layer2_cuda_weight = &cuda_pointers.back();
-    // Initialize W(1)
-    float *temp1 = (float *) malloc(params.hidden_dim * params.output_dim * sizeof(float));
-    for (std::size_t i = 0; i < params.hidden_dim * params.output_dim; ++i)
-        temp1[i] = layer2_weight->data[i];
-    check_call(cudaMemcpy(cuda_pointers.back(), temp1, params.hidden_dim * params.output_dim * sizeof(float), cudaMemcpyHostToDevice));
-    free(temp1);
+    cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
+    CudaVariable *layer2_cuda_weight = &cuda_variables.back();
+    layer2_cuda_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
+    std::cout << "W(1) initialized." << std::endl;
     
     // matmul
     modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
-    variables.emplace_back(params.num_nodes * params.output_dim);
-    output = &variables.back();
-    // Allocate GPU memory for the output of matmul
-    cuda_pointers.emplace_back();
-    check_call(cudaMalloc(&cuda_pointers.back(), params.num_nodes * params.output_dim * sizeof(float)));
-    cuda_output = &cuda_pointers.back();
+    cuda_variables.emplace_back(params.num_nodes * params.output_dim);
+    cuda_output = &cuda_variables.back();
+    std::cout << "Matmul initialized." << std::endl;
     
     // graph sum
     modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
     truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
+    std::cout << "Graphsum (2nd layer) initialized" << std::endl;
     
     // !!!
     // cross entropy loss
-    modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, &(*cuda_loss), params.output_dim));
+    modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
+    std::cout << "Cross entropy loss initialized" << std::endl;
 
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();

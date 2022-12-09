@@ -11,7 +11,11 @@
  * Dense matrix multiplication layer. 
 */
 Matmul::Matmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, int m, int n, int p) : 
-        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
+        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {
+            check_call(cudaMalloc(&cuda_a_grad, a->grad.size() * sizeof(float)));
+            check_call(cudaMalloc(&cuda_b_grad, b->grad.size() * sizeof(float)));
+            check_call(cudaMalloc(&cuda_c_grad, c->grad.size() * sizeof(float)));
+        }
 
 __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
@@ -60,13 +64,44 @@ void Matmul::forward(bool training) {
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, 2 * tile_size * n * sizeof(float)>>>(*cuda_a, *cuda_b, *cuda_c, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
+    /*
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < p; k++)
+                c->data[i * p + k] += a->data[i * n + j] * b->data[j * p + k];
+        }
+    */
     timer_stop(TMR_MATMUL_FW);
+}
+
+__global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, int n, int p) {
+    // Multiplication of matrices A and B; the result is stored in the matrix C
+    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    size_t j = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i == 0 && j == 0)
+
+    if (i < m && j < n) {
+        float tmp = 0;
+        size_t index = i * p + j;
+        C[index] = 0.0f;
+        for (size_t k = 0; k < n; ++k)
+            C[index] += A[i * n + k] * B[k * p + j];
+    }
 }
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
     a->zero_grad();
     b->zero_grad();
+    // GPU blocks and threads settings
+    const unsigned int tile_size = 32;
+    dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (n + tile_size - 1) / tile_size, 1);
+    dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
+    // Launch kernel
+    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_a_grad, *cuda_b_grad, *cuda_c_grad, m, n, p);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    /*
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
                 float tmp = 0;
@@ -76,6 +111,7 @@ void Matmul::backward() {
                 }
 		a->grad[i * n + j] = tmp;
         }
+    */
     timer_stop(TMR_MATMUL_BW);
 }
 

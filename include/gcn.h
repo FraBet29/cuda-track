@@ -5,6 +5,7 @@
 #include "sparse.h"
 #include "module.h"
 #include "optim.h"
+#include "cuda_variable.h"
 
 struct GCNParams {
     int num_nodes, input_dim, hidden_dim, output_dim;
@@ -23,15 +24,13 @@ public:
 
 class GCN {
     std::vector<Module*> modules;
-    std::vector<Variable> variables;
-    std::vector<float*> cuda_pointers;
-    Variable *input, *output;
-    float **cuda_input, **cuda_output;
+    std::vector<CudaVariable> cuda_variables;
+    CudaVariable *cuda_input, *cuda_output;
     std::vector<int> truth;
     int *cuda_truth;
     Adam optimizer;
     float loss;
-    float **cuda_loss;
+    float *cuda_loss;
     void set_input();
     void set_truth(int current_split);
     void set_cuda_input();

@@ -15,6 +15,7 @@ public:
 class Matmul: public Module {
     Variable *a, *b, *c;
     float **cuda_a, **cuda_b, **cuda_c;
+    float *cuda_a_grad, *cuda_b_grad, *cuda_c_grad;
     int m, n, p;
 public:
     Matmul(Variable *a, Variable *b, Variable *c, float **cuda_a, float **cuda_b, float **cuda_c, int m, int n, int p);
@@ -56,10 +57,10 @@ class CrossEntropyLoss: public Module {
     int *truth;
     int *cuda_truth;
     float *loss;
-    float **cuda_loss;
+    float *cuda_loss;
     int num_classes;
 public:
-    CrossEntropyLoss(Variable *logits, float **cuda_logits, int *truth, int *cuda_truth, float *loss, float **cuda_loss, int num_classes);
+    CrossEntropyLoss(Variable *logits, float **cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes);
     ~CrossEntropyLoss() {}
     void forward(bool);
     void backward();
