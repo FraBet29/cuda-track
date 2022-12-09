@@ -149,11 +149,8 @@ void GCN::set_input() {
 }
 
 void GCN::set_cuda_input() {
-    //float *temp = input->data.data();
-    float *temp = (float *) malloc(input->data.size() * sizeof(float));
-    for (int i = 0; i < input->data.size(); ++i)
-        temp[i] = input->data[i];
-    check_call(cudaMemcpy(&cuda_input->data, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    float *temp = input->data.data();
+    check_call(cudaMemcpy(cuda_input->data, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
 }
 
 // set the label of each node inside of the current_split (validation/train/test)
