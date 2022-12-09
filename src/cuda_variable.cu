@@ -69,7 +69,7 @@ __global__ void grad_norm_parallel(float *in, float *out, int size) {
 }
 
 float CudaVariable::grad_norm() {
-    float norm;
+    float norm = 0.0f;
     float *cuda_norm;
     check_call(cudaMalloc(&cuda_norm, sizeof(float)));
     grad_norm_parallel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(grad, cuda_norm, size);
