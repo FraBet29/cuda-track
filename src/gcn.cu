@@ -125,7 +125,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
     std::cout << "Graphsum (2nd layer) initialized" << std::endl;
     
-    // !!!
     // cross entropy loss
     modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
     std::cout << "Cross entropy loss initialized" << std::endl;
@@ -135,6 +134,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
     optimizer = Adam({{layer1_weight, true}, {layer2_weight, false}}, adam_params);
+    std::cout << "Adam initialized" << std::endl;
 }
 
 GCN::~GCN(){
@@ -196,26 +196,33 @@ float GCN::get_l2_penalty() {
 */
 std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
+    std::cout << "CPU input set" << std::endl;
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
+    std::cout << "GPU input set" << std::endl;
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
+    std::cout << "CPU truth set" << std::endl;
 
     set_cuda_truth();
+    std::cout << "GPU truth set" << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
+    std::cout << "Forward executed" << std::endl;
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
     for (int i = modules.size() - 1; i >= 0; i--) // do a backward pass on the layers
         modules[i]->backward();
+    std::cout << "Backward executed" << std::endl;
 
     optimizer.step(); // apply a step of the adapm optimization
 
     // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION
+    // DEALLOCATE CUDA INPUT AND CUDA TRUTH AT THE END OF EACH EPOCH?
 
     return {train_loss, train_acc};
 }
@@ -239,6 +246,7 @@ void GCN::run() {
     float total_time = 0.0;
     std::vector<float> loss_history;
     // Iterate the training process based on the selected number of epoch
+    std::cout << "Training started" << std::endl;
     for(; epoch <= params.epochs; epoch++) {
         float train_loss, train_acc, val_loss, val_acc;
         timer_start(TMR_TRAIN); // just for timing purposes
