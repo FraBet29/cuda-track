@@ -239,6 +239,7 @@ void GraphSum::backward() {
 */
 CrossEntropyLoss::CrossEntropyLoss(Variable *logits, float** cuda_logits, int *truth, int *cuda_truth, float *loss, float **cuda_loss, int num_classes) :
         logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
+            /*
             float *temp_logits_data = (float *) malloc(logits->data.size() * sizeof(float));
             float *temp_logits_grad = (float *) malloc(logits->grad.size() * sizeof(float));
             // EXTRACT RAW MALLOC DATA FROM VECTORS VIA VECTOR::DATA?
@@ -251,7 +252,8 @@ CrossEntropyLoss::CrossEntropyLoss(Variable *logits, float** cuda_logits, int *t
             check_call(cudaMemcpy(cuda_logits_data, temp_logits_data, logits->data.size() * sizeof(float), cudaMemcpyHostToDevice));
             check_call(cudaMemcpy(*cuda_logits_grad, temp_logits_grad, logits->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
             free(temp_logits_data);
-            free(temp_logits_grad);             
+            free(temp_logits_grad);      
+            */       
         }
 
 // IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY
