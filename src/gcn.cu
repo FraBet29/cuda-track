@@ -148,6 +148,11 @@ void GCN::set_input() {
         input->data[i] = data->feature_value[i];
 }
 
+void GCN::set_cuda_input() {
+    float *temp = input->data.data();
+    check_call(cudaMemcpy(&cuda_input->data, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+}
+
 // set the label of each node inside of the current_split (validation/train/test)
 void GCN::set_truth(int current_split) {
     for(int i = 0; i < params.num_nodes; i++)
@@ -155,12 +160,9 @@ void GCN::set_truth(int current_split) {
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
 }
 
-void GCN::set_cuda_input() {
-    float *temp = (float *) malloc(input->data.size() * sizeof(float));
-    for (std::size_t i = 0; i < input->data.size(); ++i)
-        temp[i] = input->data[i];
-    check_call(cudaMemcpy(*cuda_input, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    free(temp);
+void GCN::set_cuda_truth() {
+    float *temp = truth.data();
+    check_call(cudaMemcpy(&cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
 }
 
 // get the current accuracy of the model
@@ -195,11 +197,13 @@ float GCN::get_l2_penalty() {
 std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
 
-    set_truth(1); // get the true labels for the dataset with split == 1 (train)
-
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
+
+    set_truth(1); // get the true labels for the dataset with split == 1 (train)
+
+    set_cuda_truth();
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
