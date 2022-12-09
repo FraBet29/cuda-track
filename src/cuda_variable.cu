@@ -69,13 +69,13 @@ __global__ void grad_norm_parallel(float *in, float *out, int size) {
 }
 
 float CudaVariable::grad_norm() {
-    float norm = 0.0f;
+    float norm;
     float *cuda_norm;
     check_call(cudaMalloc(&cuda_norm, sizeof(float)));
     grad_norm_parallel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(grad, cuda_norm, size);
     check_kernel_call();
     cudaDeviceSynchronize();
-    check_call(cudaMemcpy(norm, cuda_norm, sizeof(float), cudaMemcpyDeviceToHost));
+    check_call(cudaMemcpy(&norm, cuda_norm, sizeof(float), cudaMemcpyDeviceToHost));
     check_call(cudaFree(cuda_norm));
     return sqrtf(norm);
 }
