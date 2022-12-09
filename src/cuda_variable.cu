@@ -17,7 +17,7 @@ CudaVariable::CudaVariable(int size, bool requires_grad, bool thread_local_grad)
 CudaVariable::~CudaVariable() {
     check_call(cudaFree(data));
     check_call(cudaFree(grad));
-    check_call(cudaFree(local_grad));
+    //check_call(cudaFree(local_grad));
 }
 
 /**
