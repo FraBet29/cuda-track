@@ -24,7 +24,9 @@ public:
 
 class GCN {
     std::vector<Module*> modules;
+    std::vector<Variable> variables;
     std::vector<CudaVariable> cuda_variables;
+    Variable *input, *output;
     CudaVariable *cuda_input, *cuda_output;
     std::vector<int> truth;
     int *cuda_truth;
