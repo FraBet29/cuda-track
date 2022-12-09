@@ -74,7 +74,7 @@ void Matmul::backward() {
     dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (n + tile_size - 1) / tile_size, 1);
     dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
     // Launch kernel
-    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, *cuda_b->grad, *cuda_c->grad, m, n, p);
+    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
