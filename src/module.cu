@@ -24,7 +24,7 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
             C[index] += A[i * n + k] * B[k * p + j];
     }
     /*
-    // Tile-based multiplication?
+    // Tile-based multiplication with shared memory?
     */
 }
 
@@ -104,7 +104,6 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *
             int *temp_indptr = sp->indptr.data();
             int *temp_indices = sp->indices.data();
             check_call(cudaMalloc(&cuda_sp->indptr, sp->indptr.size() * sizeof(int)));
-            std::cout << "ok!" << std::endl;
             check_call(cudaMalloc(&cuda_sp->indices, sp->indices.size() * sizeof(int)));
             check_call(cudaMemcpy(cuda_sp->indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
             check_call(cudaMemcpy(cuda_sp->indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
