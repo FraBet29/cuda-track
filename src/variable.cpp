@@ -7,7 +7,7 @@
 
 
 Variable::Variable(int size, bool requires_grad, bool thread_local_grad):
-    data(size), grad(requires_grad ? size : 0){}
+    data(size), grad(requires_grad ? size : 0) {}
 
 /**
  * Glorot (Xavier) method for weights initialization
