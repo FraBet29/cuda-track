@@ -5,7 +5,7 @@ void check_call(cudaError_t call) {
     if (err != cudaSuccess)
     {
         std::cout << cudaGetErrorString(err) << " in " << __FILE__ << " at line " << __LINE__ << std::endl;
-        exit(EXIT_FAILURE);                                                           \
+        exit(EXIT_FAILURE);
     }       
 }
 
@@ -14,6 +14,6 @@ void check_kernel_call() {
     if (err != cudaSuccess)
     {
         std::cout << cudaGetErrorString(err) << " in " << __FILE__ << " at line " << __LINE__ << std::endl;
-        exit(EXIT_FAILURE);                                                           \
+        exit(EXIT_FAILURE);
     }          
 }
