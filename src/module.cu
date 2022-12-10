@@ -103,7 +103,9 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
             int *temp_indptr = sp->indptr.data();
             int *temp_indices = sp->indices.data();
+            std::cout << "OK 0" << std::endl;
             check_call(cudaMalloc(&cuda_sp->indptr, sp->indptr.size() * sizeof(int)));
+            std::cout << "OK 1" << std::endl;
             check_call(cudaMalloc(&cuda_sp->indices, sp->indices.size() * sizeof(int)));
             check_call(cudaMemcpy(cuda_sp->indptr, temp_indptr, sp->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
             check_call(cudaMemcpy(cuda_sp->indices, temp_indices, sp->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
