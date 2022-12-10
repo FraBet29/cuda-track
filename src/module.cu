@@ -129,6 +129,7 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
 void SparseMatmul::forward(bool training) {
     std::cout << "Executing sparsematmul" << std::endl;
     timer_start(TMR_SPMATMUL_FW);
+    /*
     c->zero();
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
@@ -138,6 +139,7 @@ void SparseMatmul::forward(bool training) {
     sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, p, sp->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
+    */
     /*
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
@@ -201,6 +203,7 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
 void GraphSum::forward(bool training) {
     std::cout << "Executing graphsum" << std::endl;
     timer_start(TMR_GRAPHSUM_FW);
+    /*
     out->zero();
     // GPU blocks and threads settings
     const unsigned int max_num_threads = 1024;
@@ -210,6 +213,7 @@ void GraphSum::forward(bool training) {
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, dim, graph->indptr.size() - 1);
     check_kernel_call();
     cudaDeviceSynchronize();
+    */
     /*
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
