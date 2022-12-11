@@ -214,20 +214,21 @@ void GraphSum::backward() {
 */
 CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
         logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
-            /*
-            ???   
-            */       
+            check_call(cudaMalloc(&cuda_loss, sizeof(float)));    
         }
 
-// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY
+CrossEntropyLoss::CrossEntropyLoss() {
+    check_call(cudaFree(cuda_truth));
+    check_call(cudaFree(cuda_loss));
+}
 
-__global__ void crossentropyloss_forward_parallel1(int *truth, float *logits_data, float *logits_grad, float *loss, int *count, bool training, int N, int n) {
+__global__ void crossentropyloss_forward_parallel1(bool training, int *truth, float *logits_data, float *logits_grad, float *total_loss, int *count, int N, int n) {
     // N: logits->data.size(), n: num_classes
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N / n) {
         if (truth[i] >= 0) {
-            atomicAdd(&(*count), 1);
-            float *logit = &logits_data[i * n];
+            atomicAdd(&count, 1);
+            float *logit = &logits_data[i * n]; // each thread works on a different chunk of logits_data
             float max_logit = -1e30, sum_exp = 0;
             for (int j = 0; j < n; j++)
                 max_logit = fmaxf(max_logit, logit[j]);
@@ -235,20 +236,21 @@ __global__ void crossentropyloss_forward_parallel1(int *truth, float *logits_dat
                 logit[j] -= max_logit;
                 sum_exp += expf(logit[j]);
             }
-            atomicAdd(&(*loss), logf(sum_exp) - logit[truth[i]]);
+            atomicAdd(&total_loss, logf(sum_exp) - logit[truth[i]]);
             if (training) {
                 for (int j = 0; j < n; j++) {
                     float prob = expf(logit[j]) / sum_exp;
-                    logits_grad[i * n + j] = prob;
+                    logits_grad[i * n + j] = prob; // each thread works on a different chunk of logits_grad
                 }
                 __syncthreads();
                 atomicAdd(&logits_grad[i * n + truth[i]], -1.0);
             }
         }
     }
-    __syncthreads();
-    if (i == 0)
-        *loss /= *count;
+}
+
+__global__ void crossentropyloss_forward_parallel2(float *loss, float *total_loss, int *count) {
+    *loss = *total_loss / *count;
 }
 
 __global__ void crossentropyloss_forward_parallel2(float *logits_grad, int *count, int N) {
@@ -259,26 +261,28 @@ __global__ void crossentropyloss_forward_parallel2(float *logits_grad, int *coun
 
 void CrossEntropyLoss::forward(bool training) {
     timer_start(TMR_LOSS_FW);
-    float total_loss = 0;
-    int count = 0;
+    float *cuda_total_loss;
+    check_call(cudaMalloc(&total_loss, sizeof(float)));
     int *cuda_count;
     check_call(cudaMalloc(&cuda_count, sizeof(int)));
-    if (training) logits->zero_grad();
-    /*
+    if (training) cuda_logits->zero_grad();
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024;
-    dim3 blocksPerGrid1((logits->data.size() / num_classes + max_num_threads - 1) / max_num_threads, 1, 1);
+    dim3 blocksPerGrid1((logits->data.size() / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(max_num_threads, 1, 1);
-    crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(cuda_truth, cuda_logits_data, *cuda_logits_grad, *cuda_loss, cuda_count, training, logits->data.size(), num_classes);
+    crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, logits->data.size(), num_classes);
     check_kernel_call();
     cudaDeviceSynchronize();
-    check_call(cudaMemcpy(&loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
+    crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
     if (training) {
-        dim3 blocksPerGrid2((logits->grad.size() + max_num_threads - 1) / max_num_threads, 1, 1);
-        crossentropyloss_forward_parallel2<<<blocksPerGrid2, threadsPerBlock>>>(*cuda_logits_grad, cuda_count, logits->grad.size());
+        dim3 blocksPerGrid3((logits->grad.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+        crossentropyloss_forward_parallel3<<<blocksPerGrid3, threadsPerBlock>>>(cuda_logits->grad, cuda_count, logits->grad.size());
     }
+    check_call(cudaFree(cuda_total_loss));
     check_call(cudaFree(cuda_count));
-    */
+    /*
+    float total_loss = 0;
+    int count = 0;
+    if (training) logits->zero_grad();
     for (int i = 0; i < logits->data.size() / num_classes; i++) {
         if (truth[i] < 0) continue;
         count++;
@@ -304,6 +308,7 @@ void CrossEntropyLoss::forward(bool training) {
     if (training)
         for (float & i : logits->grad)
             i /= count;
+    */
     timer_stop(TMR_LOSS_FW);
 }
 
