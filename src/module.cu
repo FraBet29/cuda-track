@@ -91,10 +91,10 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *
             cuda_sp = cuda_sp_temp;
         }
 
-__global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int m, int p) {
+__global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int N, int p) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int k = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i < m && k < p) {
+    if (i < N && k < p) {
         int index = i * p + k;
         C[index] = 0.0f;
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
@@ -149,37 +149,33 @@ GraphSum::GraphSum(Variable *in, Variable *out, CudaVariable *cuda_in, CudaVaria
             cuda_graph = cuda_graph_temp;
         }
 
-// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY FOR SPARSE INDEX
-
-__global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, int *indices, int dim, int N) {
-    size_t src = threadIdx.x + blockIdx.x * blockDim.x;
-    if (src < N) {
+__global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, int *indices, int N, int dim) {
+    int src = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    if (src < N && j < dim) {
+        int index = src * dim + j;
+        out[index] = 0.0f;
         for (int i = indptr[src]; i < indptr[src + 1]; i++) {
             int dst = indices[i];
             float coef = 1.0 / sqrtf(
                     (indptr[src + 1] - indptr[src]) * (indptr[dst + 1] - indptr[dst])
             );
-            for (int j = 0; j < dim; j++)
-                // This only works for undirected graphs. Should be out[dst] += coef * in[src]
-                atomicAdd(&out[src * dim + j], coef * in[dst * dim + j]);
-            // SYNCHRONIZATION NEEDED NOW?
+            // This only works for undirected graphs. Should be out[dst] += coef * in[src]
+            out[index] += coef * in[dst * dim + j];
         }
     }        
 }
 
 void GraphSum::forward(bool training) {
     timer_start(TMR_GRAPHSUM_FW);
-    /*
     out->zero();
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024;
-    dim3 blocksPerGrid((graph->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
-    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
     // Launch kernel
-    graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, dim, graph->indptr.size() - 1);
+    graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
     check_kernel_call();
     cudaDeviceSynchronize();
-    */
     /*
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
