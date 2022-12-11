@@ -6,6 +6,9 @@
 #include <cmath>
 #include <iostream>
 
+#define MAX_THREADS_PER_BLOCK_1D 1024
+#define MAX_THREADS_PER_BLOCK_2D 32
+
 // ################################################################################################################
 /**
  * Dense matrix multiplication layer. 
@@ -15,17 +18,15 @@ Matmul::Matmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, Cuda
 
 __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
-    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
-    size_t j = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i < m && j < p) {
-        size_t index = i * p + j;
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int k = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i < m && k < p) {
+        int index = i * p + k;
         C[index] = 0.0f;
-        for (size_t k = 0; k < n; ++k)
-            C[index] += A[i * n + k] * B[k * p + j];
+        for (int j = 0; j < n; ++j)
+            C[index] += A[i * n + j] * B[j * p + k];
     }
-    /*
-    // Tile-based multiplication with shared memory?
-    */
+    // TILE-BASED MULTIPLICATION WITH SHARED MEMORY?
 }
 
 void Matmul::forward(bool training) {
@@ -33,9 +34,8 @@ void Matmul::forward(bool training) {
     c->zero();
     // GPU blocks and threads settings
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
-    const unsigned int tile_size = 32;
-    dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (p + tile_size - 1) / tile_size, 1);
-    dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
+    dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
     // Launch kernel
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
@@ -51,33 +51,22 @@ void Matmul::forward(bool training) {
 }
 
 __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, int n, int p) {
-    // Multiplication of matrices A and B; the result is stored in the matrix C
-    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
-    size_t j = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i == 0 && j == 0)
-
-    if (i < m && j < n) {
-        float tmp = 0;
-        size_t index = i * p + j;
-        C[index] = 0.0f;
-        for (size_t k = 0; k < n; ++k)
-            C[index] += A[i * n + k] * B[k * p + j];
-    }
+    
 }
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
     a->zero_grad();
     b->zero_grad();
+    /*
     // GPU blocks and threads settings
-    const unsigned int tile_size = 32;
-    dim3 blocksPerGrid((m + tile_size - 1) / tile_size, (n + tile_size - 1) / tile_size, 1);
-    dim3 threadsPerBlock(tile_size, tile_size, 1); // 2D squared blocks of size (tile_size, tile_size)
+    dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (n + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
     // Launch kernel
     matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-    /*
+    */
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
                 float tmp = 0;
@@ -85,9 +74,8 @@ void Matmul::backward() {
                     tmp += c->grad[i * p + k] * b->data[j * p + k];
                     b->grad[j * p + k] += c->grad[i * p + k] * a->data[i * n + j];
                 }
-		a->grad[i * n + j] = tmp;
+		    a->grad[i * n + j] = tmp;
         }
-    */
     timer_stop(TMR_MATMUL_BW);
 }
 
@@ -103,34 +91,29 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *
             cuda_sp = cuda_sp_temp;
         }
 
-
-// IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY FOR SPARSE INDEX
-
-__global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int p, int N) {
-    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
-    if (i < N) {
+__global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int m, int p) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int k = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i < m && k < p) {
+        int index = i * p + k;
+        C[index] = 0.0f;
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            for (int k = 0; k < p; k++)
-                atomicAdd(&C[i * p + k], A[jj] * B[j * p + k]);
-            // SYNCHRONIZATION NEEDED NOW?
+            C[index] += A[jj] * B[j * p + k];
         }
     }        
 }
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
-    /*
     c->zero();
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024;
-    dim3 blocksPerGrid((sp->indptr.size() - 1 + max_num_threads - 1) / max_num_threads, 1, 1);
-    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
     // Launch kernel
-    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, p, sp->indptr.size() - 1);
+    sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-    */
     /*
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {

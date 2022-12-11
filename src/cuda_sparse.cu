@@ -8,3 +8,8 @@ CudaSparseIndex::CudaSparseIndex(int *indices, int *indptr, int indices_size, in
             check_call(cudaMemcpy(this->indptr, indptr, indptr_size * sizeof(int), cudaMemcpyHostToDevice));
             check_call(cudaMemcpy(this->indices, indices, indices_size * sizeof(int), cudaMemcpyHostToDevice));
 }
+
+CudaSparseIndex::~CudaSparseIndex() {
+    check_call(cudaFree(indptr));
+    check_call(cudaFree(indices));
+}
