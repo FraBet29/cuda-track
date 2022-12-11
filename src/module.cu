@@ -458,7 +458,7 @@ void Dropout::forward(bool training) {
     timer_stop(TMR_DROPOUT_FW);
 }
 
-__global__ void dropout_backward_parallel(float *grad, bool *mask, int N, float scale) {
+__global__ void dropout_backward_parallel(float *grad, int *mask, int N, float scale) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
         grad[i] *= mask[i] ? scale : 0.0f;
