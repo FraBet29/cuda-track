@@ -347,7 +347,7 @@ __global__ void relu_forward_parallel(float *in, bool *mask, int N, bool trainin
     if (i < N) {
         bool keep = in[i] > 0;
         if (training) mask[i] = keep;
-        if (!keep) in[i] = 0;
+        if (!keep) in[i] = 0.0f;
     }
 }
 
@@ -370,7 +370,7 @@ void ReLU::forward(bool training) {
     timer_stop(TMR_RELU_FW);
 }
 
-__global__ void relu_backward_parallel(float *grad, float *mask, int N) {
+__global__ void relu_backward_parallel(float *grad, bool *mask, int N) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
         if (!mask[i]) grad[i] = 0.0f;
