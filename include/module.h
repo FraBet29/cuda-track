@@ -84,7 +84,7 @@ class Dropout: public Module {
     int *mask;
     int *cuda_mask;
     float p;
-    //curandState *cuda_rand_state;
+    curandState *cuda_rand_state;
 public:
     Dropout(Variable *in, CudaVariable *cuda_in, float p);
     ~Dropout();
