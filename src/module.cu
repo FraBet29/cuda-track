@@ -101,7 +101,7 @@ void Matmul::backward() {
 */
 SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p) :
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
-            CudaSparseIndex *cuda_sp_temp = new CudaSparseIndex::CudaSparseIndex(sp->indices.data(), sp->indptr.data(), sp->indices.size(), sp->indptr.size());
+            CudaSparseIndex *cuda_sp_temp = new CudaSparseIndex(sp->indices.data(), sp->indptr.data(), sp->indices.size(), sp->indptr.size());
             cuda_sp = cuda_sp_temp;
         }
 
