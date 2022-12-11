@@ -412,21 +412,20 @@ void Dropout::forward(bool training) {
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
     float scale = 1 / (1 - p);
-    /*
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024; // must be the same value as the value used in the constructor
-    dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
-    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
-    */
+    /*
     for (int i = 0; i < in->data.size(); i++) {
-        bool keep = (int)RAND() >= threshold;
+        bool keep = (int) RAND() >= threshold;
         in->data[i] *= keep ? scale : 0;
         if (mask) mask[i] = keep;
     }
+    */
     timer_stop(TMR_DROPOUT_FW);
 }
 
