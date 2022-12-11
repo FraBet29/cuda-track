@@ -426,7 +426,7 @@ Dropout::~Dropout() {
 }
 
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
-    size_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
         float my_randf = rand_max * curand_uniform(&rand_state[i]);
         int my_rand = (int) truncf(my_randf);
@@ -458,12 +458,28 @@ void Dropout::forward(bool training) {
     timer_stop(TMR_DROPOUT_FW);
 }
 
+__global__ void dropout_backward_parallel(float *grad, bool *mask, int N, float scale) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
+        grad[i] *= mask[i] ? scale : 0.0f;
+    }
+}
+
 void Dropout::backward() {
     if (!mask) return;
     timer_start(TMR_DROPOUT_BW);
     float scale = 1 / (1 - p);
+    // GPU blocks and threads settings
+    dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    // Launch kernel
+    dropout_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, in->data.size(), scale);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    /*
     for (int i = 0; i < in->data.size(); i++)
         in->grad[i] *= mask[i] ? scale : 0;
+    */
     timer_stop(TMR_DROPOUT_BW);
 }
 
