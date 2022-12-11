@@ -243,7 +243,7 @@ __global__ void crossentropyloss_forward_parallel1(bool training, int *truth, fl
                     logits_grad[i * n + j] = prob; // each thread works on a different chunk of logits_grad
                 }
                 __syncthreads();
-                atomicAdd(&logits_grad[i * n + truth[i]], -1.0);
+                atomicAdd(&logits_grad[i * n + truth[i]], -1.0f);
             }
         }
     }
@@ -263,10 +263,8 @@ void CrossEntropyLoss::forward(bool training) {
     timer_start(TMR_LOSS_FW);
     float *cuda_total_loss;
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
-    std::cout << "OK 0" << std::endl;
     int *cuda_count;
     check_call(cudaMalloc(&cuda_count, sizeof(int)));
-    std::cout << "OK 1" << std::endl;
     if (training) cuda_logits->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid1((logits->data.size() / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -283,6 +281,8 @@ void CrossEntropyLoss::forward(bool training) {
         check_kernel_call();
         cudaDeviceSynchronize();
     }
+    check_call(cudaMemcpy(loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
+    std::cout << *loss << std::endl;
     check_call(cudaFree(cuda_total_loss));
     std::cout << "OK 2" << std::endl;
     check_call(cudaFree(cuda_count));
