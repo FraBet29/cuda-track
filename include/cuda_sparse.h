@@ -1,8 +1,12 @@
 #ifndef CUDA_SPARSE_H
 
-struct CudaSparseIndex {
+class CudaSparseIndex {
+public:
+    CudaSparseIndex(int *indices, int *indptr, int indices_size, int indptr_size);
     int *indices;
     int *indptr;
+    int indices_size;
+    int indptr_size;
 };
 
 
