@@ -29,7 +29,6 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
 }
 
 void Matmul::forward(bool training) {
-    std::cout << "Executing matmul" << std::endl;
     timer_start(TMR_MATMUL_FW);
     c->zero();
     // GPU blocks and threads settings
@@ -49,7 +48,6 @@ void Matmul::forward(bool training) {
         }
     */
     timer_stop(TMR_MATMUL_FW);
-    std::cout << "Matmul executed" << std::endl;
 }
 
 __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, int n, int p) {
@@ -121,7 +119,6 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
 }
 
 void SparseMatmul::forward(bool training) {
-    std::cout << "Executing sparsematmul" << std::endl;
     timer_start(TMR_SPMATMUL_FW);
     /*
     c->zero();
@@ -143,7 +140,6 @@ void SparseMatmul::forward(bool training) {
         }
     */
     timer_stop(TMR_SPMATMUL_FW);
-    std::cout << "Sparsematmul executed" << std::endl;
 }
 
 void SparseMatmul::backward() {
@@ -166,14 +162,8 @@ void SparseMatmul::backward() {
 */
 GraphSum::GraphSum(Variable *in, Variable *out, CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim) :
         in(in), out(out), cuda_in(cuda_in), cuda_out(cuda_out), graph(graph), dim(dim) {
-            int *temp_indptr = graph->indptr.data();
-            int *temp_indices = graph->indices.data();
-            /*
-            check_call(cudaMalloc(cuda_graph->indptr, graph->indptr.size() * sizeof(int)));
-            check_call(cudaMalloc(cuda_graph->indices, graph->indices.size() * sizeof(int)));
-            check_call(cudaMemcpy(cuda_graph->indptr, temp_indptr, graph->indptr.size() * sizeof(int), cudaMemcpyHostToDevice));
-            check_call(cudaMemcpy(cuda_graph->indices, temp_indices, graph->indices.size() * sizeof(int), cudaMemcpyHostToDevice));
-            */
+            CudaSparseIndex *cuda_graph_temp = new CudaSparseIndex(graph->indices.data(), graph->indptr.data(), graph->indices.size(), graph->indptr.size());
+            cuda_graph = cuda_graph_temp;
         }
 
 // IMPLEMENT DESTRUCTOR TO DEALLOCATE CUDA MEMORY FOR SPARSE INDEX
