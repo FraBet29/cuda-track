@@ -340,9 +340,8 @@ __global__ void relu_forward_parallel(float *in, bool *mask, int N, bool trainin
 void ReLU::forward(bool training) {
     timer_start(TMR_RELU_FW);
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024;
-    dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
-    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
     relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), training);
     check_kernel_call();
@@ -380,24 +379,21 @@ Dropout::Dropout(Variable *in, CudaVariable *cuda_in, float p) {
     }
     else {
         mask = nullptr;
+        cuda_mask = nullptr;
     }
-    // NULLPTR FOR CUDA POINTERS?
-    /*
     // GPU blocks and threads settings
-    const unsigned int max_num_threads = 1024;
-    dim3 blocksPerGrid((in->data.size() + max_num_threads - 1) / max_num_threads, 1, 1);
-    dim3 threadsPerBlock(max_num_threads, 1, 1);
+    dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Initialize CUDA random
     check_call(cudaMalloc(&cuda_rand_state, in->data.size() * sizeof(curandState)));
-    setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
+    rand_setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state);
     check_kernel_call();
     cudaDeviceSynchronize();
-    */
 }
 
 Dropout::~Dropout() {
     if (mask) delete[] mask;
-    check_call(cudaFree(cuda_mask));
+    if (cuda_mask) check_call(cudaFree(cuda_mask));
 }
 
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
@@ -407,7 +403,7 @@ __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int 
         int my_rand = (int) truncf(my_randf);
         bool keep = my_rand >= threshold;
         in[i] *= keep ? scale : 0;
-        if (mask) mask[i] = keep; // CHECK IF IT IS NOT A NULLPTR?
+        if (mask) mask[i] = keep;
     }
 }
 
