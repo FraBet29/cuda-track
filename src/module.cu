@@ -3,6 +3,7 @@
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
 #include "../include/cuda_rand.h"
+#include "../include/cuda_sparse.h"
 #include <cmath>
 #include <iostream>
 
