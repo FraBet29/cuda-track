@@ -416,7 +416,7 @@ void Dropout::forward(bool training) {
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
-    dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(*cuda_in, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
+    dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
