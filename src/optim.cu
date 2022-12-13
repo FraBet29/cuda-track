@@ -19,8 +19,8 @@ int AdamVariable::size() {
 CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
     data(var->data), grad(var->grad), data_size(var->size), decay(decay) {
         std::vector<float> temp(var->size, 0.0f);
-        check_call(cudaMalloc(m, var->size * sizeof(float)));
-        check_call(cudaMalloc(v, var->size * sizeof(float)));
+        check_call(cudaMalloc(&m, var->size * sizeof(float)));
+        check_call(cudaMalloc(&v, var->size * sizeof(float)));
         check_call(cudaMemcpy(m, temp.data(), var->size * sizeof(float), cudaMemcpyHostToDevice));
         check_call(cudaMemcpy(v, temp.data(), var->size * sizeof(float), cudaMemcpyHostToDevice));
     }
