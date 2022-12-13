@@ -223,8 +223,29 @@ void GraphSum::forward(bool training) {
     timer_stop(TMR_GRAPHSUM_FW);
 }
 
+__global__ void graphsum_backward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int N, int p) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int k = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i < N && k < p) {
+        for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
+            int j = indices[jj];
+            atomicAdd(&B[j * p + k], B[i * p + k] * A[jj]); // TRY TO AVOID ATOMIC ADD
+        }
+    }
+}
+
 void GraphSum::backward() {
     timer_start(TMR_GRAPHSUM_BW);
+    cuda_in->zero_grad();
+    // GPU blocks and threads settings
+    dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
+    // Launch kernel
+    // SAME EXACT CODE STRUCTURE AS GRAPHSUM FORWARD, BUT WITH IN AND OUT SWAPPED!
+    graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_out->grad, cuda_in->grad, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    /*
     in->zero_grad();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
@@ -235,6 +256,7 @@ void GraphSum::backward() {
             for (int j = 0; j < dim; j++)
                 in->grad[src * dim + j] += coef * out->grad[dst * dim + j];
         }
+    */
     timer_stop(TMR_GRAPHSUM_BW);
 }
 
