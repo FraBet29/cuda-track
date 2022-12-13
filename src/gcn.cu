@@ -272,7 +272,9 @@ std::pair<float, float> GCN::train_epoch() {
 */
 std::pair<float, float> GCN::eval(int current_split) {
     set_input();
+    set_cuda_input();
     set_truth(current_split);
+    set_cuda_truth();
     for (auto m: modules)
         m->forward(false);
     float test_loss = loss + get_l2_penalty();
