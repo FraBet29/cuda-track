@@ -186,7 +186,7 @@ float GCN::get_accuracy() {
     check_call(cudaMalloc(&cuda_total, sizeof(int)));
     check_call(cudaMemcpy(cuda_wrong, &wrong, sizeof(int), cudaMemcpyHostToDevice));
     check_call(cudaMemcpy(cuda_total, &total, sizeof(int), cudaMemcpyHostToDevice));
-    parallel_get_accuracy<<<1, 1>>>(cuda_wrong, cuda_total, cuda_truth, cuda_output.data, params.num_nodes, D);
+    parallel_get_accuracy<<<1, 1>>>(cuda_wrong, cuda_total, cuda_truth, cuda_output.data, params.num_nodes, params.output_dim);
     check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&wrong, cuda_wrong, sizeof(int), cudaMemcpyDeviceToHost));
