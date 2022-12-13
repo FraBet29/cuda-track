@@ -57,7 +57,7 @@ __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, in
         float tmp = 0;
             for (int k = 0; k < p; k++) {
                 tmp += C[i * p + k] * B[j * p + k];
-                atomicAdd(&B[j * p + k], C[i * p + k] * A[i * n + j]);
+                atomicAdd(&B[j * p + k], C[i * p + k] * A[i * n + j]); // TRY TO AVOID ATOMIC ADD
             }
 		    A[i * n + j] = tmp;
     }
@@ -120,7 +120,7 @@ void SparseMatmul::forward(bool training) {
     c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
-    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
     check_kernel_call();
@@ -136,16 +136,37 @@ void SparseMatmul::forward(bool training) {
     timer_stop(TMR_SPMATMUL_FW);
 }
 
+__global__ void sparsematmul_backward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int N, int p) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int k = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i < N && k < p) {
+        for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
+            int j = indices[jj];
+            atomicAdd(&B[j * p + k], B[i * p + k] * A[jj]); // TRY TO AVOID ATOMIC ADD
+        }
+    }
+}
+
 void SparseMatmul::backward() {
     timer_start(TMR_SPMATMUL_BW);
+    cuda_b->zero_grad();
+    // GPU blocks and threads settings
+    dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
+    // Launch kernel
+    sparsematmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->grad, cuda_c->grad, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    /*
     b->zero_grad();
-    int row = 0;
+    // int row = 0;
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
             int j = sp->indices[jj];
             for (int k = 0; k < p; k++)
                     b->grad[j * p + k] += c->grad[i * p + k] * a->data[jj];
         }
+    */
     timer_stop(TMR_SPMATMUL_BW);
 }
 
