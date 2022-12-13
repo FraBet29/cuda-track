@@ -51,31 +51,42 @@ void Matmul::forward(bool training) {
 }
 
 __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, int n, int p) {
-    
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    if (i < m && j < n) {
+        float tmp = 0;
+            for (int k = 0; k < p; k++) {
+                tmp += C[i * p + k] * B[j * p + k];
+                atomicAdd(&B[j * p + k], C[i * p + k] * A[i * n + j]);
+            }
+		    A[i * n + j] = tmp;
+    }
 }
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
-    a->zero_grad();
-    b->zero_grad();
-    /*
+    cuda_a->zero_grad();
+    cuda_b->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (n + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
-    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-    */
+    /*
+    a->zero_grad();
+    b->zero_grad();
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
-                float tmp = 0;
-                for (int k = 0; k < p; k++) {
-                    tmp += c->grad[i * p + k] * b->data[j * p + k];
-                    b->grad[j * p + k] += c->grad[i * p + k] * a->data[i * n + j];
-                }
+            float tmp = 0;
+            for (int k = 0; k < p; k++) {
+                tmp += c->grad[i * p + k] * b->data[j * p + k];
+                b->grad[j * p + k] += c->grad[i * p + k] * a->data[i * n + j];
+            }
 		    a->grad[i * n + j] = tmp;
         }
+    */
     timer_stop(TMR_MATMUL_BW);
 }
 
@@ -286,7 +297,6 @@ void CrossEntropyLoss::forward(bool training) {
         crossentropyloss_forward_parallel3<<<blocksPerGrid3, threadsPerBlock>>>(cuda_logits->grad, cuda_count, logits->grad.size());
         check_kernel_call();
         cudaDeviceSynchronize();
-        std::cout << "OK 4" << std::endl;
     }
     //check_call(cudaMemcpy(loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
     check_call(cudaFree(cuda_total_loss));
