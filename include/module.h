@@ -20,7 +20,7 @@ class Matmul: public Module {
     int m, n, p;
 public:
     Matmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p);
-    ~Matmul() {};
+    ~Matmul() { std::cout << "Deallocating Matmul." << std::endl; };
     void forward(bool);
     void backward();
 };
@@ -33,7 +33,7 @@ class SparseMatmul: public Module {
     int m, n, p;
 public:
     SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p);
-    ~SparseMatmul() {}
+    ~SparseMatmul() { std::cout << "Deallocating SparseMatmul." << std::endl; }
     void forward(bool);
     void backward();
 };
@@ -46,7 +46,7 @@ class GraphSum: public Module {
     int dim;
 public:
     GraphSum(Variable *in, Variable *out, CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim);
-    ~GraphSum() {}
+    ~GraphSum() { std::cout << "Deallocating GraphSum." << std::endl; }
     void forward(bool);
     void backward();
 };

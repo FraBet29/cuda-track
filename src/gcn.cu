@@ -123,18 +123,18 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
     truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
-    std::cout << "Graphsum (2nd layer) initialized" << std::endl;
+    std::cout << "Graphsum (2nd layer) initialized." << std::endl;
     
     // cross entropy loss
     modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
-    std::cout << "Cross entropy loss initialized" << std::endl;
+    std::cout << "Cross entropy loss initialized." << std::endl;
 
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
     optimizer = Adam({{layer1_weight, true}, {layer2_weight, false}}, adam_params);
-    std::cout << "Adam initialized" << std::endl;
+    std::cout << "Adam initialized." << std::endl;
 }
 
 GCN::~GCN(){
@@ -165,8 +165,34 @@ void GCN::set_cuda_truth() {
     check_call(cudaMemcpy(cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
 }
 
+__global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float *data, int N, int D) {
+    for(int i = 0; i < N; i++) {
+        if(truth[i] >= 0) continue;
+        *total++;
+        float truth_logit = data[i * D + truth[i]];
+        for(int j = 0; j < D; j++)
+            if (data[i * D + j] > truth_logit) {
+                *wrong++;
+                break;
+            }
+    }
+}
+
 // get the current accuracy of the model
 float GCN::get_accuracy() {
+    int wrong = 0, total = 0;
+    int *cuda_wrong, *cuda_total;
+    check_call(cudaMalloc(&cuda_wrong, sizeof(int)));
+    check_call(cudaMalloc(&cuda_total, sizeof(int)));
+    check_call(cudaMemcpy(cuda_wrong, &wrong, sizeof(int), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(cuda_total, &total, sizeof(int), cudaMemcpyHostToDevice));
+    parallel_get_accuracy<<<1, 1>>>(cuda_wrong, cuda_total, cuda_truth, cuda_output.data, params.num_nodes, D);
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    check_call(cudaMemcpy(&wrong, cuda_wrong, sizeof(int), cudaMemcpyDeviceToHost));
+    check_call(cudaMemcpy(&total, cuda_total, sizeof(int), cudaMemcpyDeviceToHost));
+    return float(total - wrong) / total;
+    /*
     int wrong = 0, total = 0;
     for(int i = 0; i < params.num_nodes; i++) {
         if(truth[i] < 0) continue;
@@ -179,16 +205,35 @@ float GCN::get_accuracy() {
             }
     }
     return float(total - wrong) / total;
+    */
+}
+
+__global__ void parallel_get_l2_penalty(float *l2, float *data, int N) {
+    for (int i = 0; i < N; i++) {
+        float x = data[i];
+        *l2 += x * x;
+    }
 }
 
 // reduce the likelihood of model overfitting by using l2 regularization
 float GCN::get_l2_penalty() {
+    float l2 = 0;
+    float *cuda_l2;
+    check_call(cudaMalloc(&cuda_l2, sizeof(float)));
+    check_call(cudaMemcpy(cuda_l2, &l2, sizeof(float), cudaMemcpyHostToDevice));
+    parallel_get_l2_penalty<<<1, 1>>>(cuda_l2, cuda_variables[2].data, variables[2].data.size());
+    check_kernel_call();
+    cudaDeviceSynchronize();
+    check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
+    return params.weight_decay * l2 / 2;
+    /*
     float l2 = 0;
     for (int i = 0; i < variables[2].data.size(); i++) {
         float x = variables[2].data[i];
         l2 += x * x;
     }
     return params.weight_decay * l2 / 2;
+    */
 }
 
 /**
@@ -240,7 +285,7 @@ void GCN::run() {
     float total_time = 0.0;
     std::vector<float> loss_history;
     // Iterate the training process based on the selected number of epoch
-    std::cout << "Training started" << std::endl;
+    std::cout << "Training started." << std::endl;
     for(; epoch <= params.epochs; epoch++) {
         float train_loss, train_acc, val_loss, val_acc;
         timer_start(TMR_TRAIN); // just for timing purposes

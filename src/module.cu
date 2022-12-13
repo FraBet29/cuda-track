@@ -203,7 +203,7 @@ void GraphSum::forward(bool training) {
     out->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
-    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
     check_kernel_call();
@@ -239,7 +239,7 @@ void GraphSum::backward() {
     cuda_in->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
-    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     // SAME EXACT CODE STRUCTURE AS GRAPHSUM FORWARD, BUT WITH IN AND OUT SWAPPED!
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_out->grad, cuda_in->grad, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
@@ -272,6 +272,7 @@ CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, 
         }
 
 CrossEntropyLoss::~CrossEntropyLoss() {
+    std::cout << "Deallocating CrossEntropyLoss." << std::endl;
     check_call(cudaFree(cuda_truth));
     check_call(cudaFree(cuda_loss));
 }
@@ -393,6 +394,7 @@ ReLU::ReLU(Variable *in, CudaVariable *cuda_in) {
 }
 
 ReLU::~ReLU() {
+    std::cout << "Deallocating ReLU." << std::endl;
     delete[] mask;
     check_call(cudaFree(cuda_mask));
 }
@@ -476,6 +478,7 @@ Dropout::Dropout(Variable *in, CudaVariable *cuda_in, float p) {
 }
 
 Dropout::~Dropout() {
+    std::cout << "Deallocating Dropout." << std::endl;
     if (mask) delete[] mask;
     if (cuda_mask) check_call(cudaFree(cuda_mask));
 }
