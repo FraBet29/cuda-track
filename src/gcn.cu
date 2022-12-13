@@ -260,6 +260,8 @@ std::pair<float, float> GCN::train_epoch() {
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
+    std::cout << "Metrics computed." << std::endl;
+    
     for (int i = modules.size() - 1; i >= 0; i--) // do a backward pass on the layers
         modules[i]->backward();
     std::cout << "Backward executed." << std::endl;
@@ -278,6 +280,7 @@ std::pair<float, float> GCN::train_epoch() {
  * current_split == 3 --> test
 */
 std::pair<float, float> GCN::eval(int current_split) {
+    std::cout << "Evaluation started." << std::endl;
     set_input();
     set_cuda_input();
     set_truth(current_split);
@@ -286,6 +289,7 @@ std::pair<float, float> GCN::eval(int current_split) {
         m->forward(false);
     float test_loss = loss + get_l2_penalty();
     float test_acc = get_accuracy();
+    std::cout << "Evaluation ended." << std::endl;
     return {test_loss, test_acc};
 }
 
