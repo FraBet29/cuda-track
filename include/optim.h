@@ -2,6 +2,7 @@
 #include <vector>
 #include <utility>
 #include "variable.h"
+#include "cuda_variable.h"
 
 struct AdamParams {
     float lr, beta1, beta2, eps, weight_decay;
@@ -16,13 +17,23 @@ public:
     AdamVariable(Variable*, bool);
 };
 
+struct CudaAdamVariable {
+    float *data, *grad, *m, *v;
+    bool decay;
+    int data_size;
+public:
+    int size();
+    CudaAdamVariable(CudaVariable*, bool);
+};
+
 class Adam {
     AdamParams params;
     int step_count;
     std::vector<AdamVariable> vars;
+    std::vector<CudaAdamVariable> cuda_vars;
 public:
     Adam() {}
-    Adam(std::vector<std::pair<Variable*, bool>> vars, AdamParams params);
+    Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params);
     void step();
 };
 
