@@ -283,10 +283,13 @@ std::pair<float, float> GCN::eval(int current_split) {
     std::cout << "Evaluation started." << std::endl;
     set_input();
     set_cuda_input();
+    std::cout << "Evaluation input set." << std::endl;
     set_truth(current_split);
     set_cuda_truth();
+    std::cout << "Evaluation truth set." << std::endl;
     for (auto m: modules)
         m->forward(false);
+    std::cout << "Evaluation forward executed." << std::endl;
     float test_loss = loss + get_l2_penalty();
     float test_acc = get_accuracy();
     std::cout << "Evaluation ended." << std::endl;
