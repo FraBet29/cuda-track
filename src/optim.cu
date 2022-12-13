@@ -48,6 +48,7 @@ __global__ void adam_step_parallel(float *data, float *grad, float *m, float *v,
 }
 
 void Adam::step() {
+    std::cout << "Adam started" << std::endl;
     step_count++;
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
     for (auto &var: cuda_vars) {
@@ -58,6 +59,7 @@ void Adam::step() {
         check_kernel_call();
     }
     cudaDeviceSynchronize();
+    std::cout << "Adam ended" << std::endl;
     /*
     step_count++;
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
