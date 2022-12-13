@@ -241,18 +241,16 @@ float GCN::get_l2_penalty() {
 */
 std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
-    std::cout << "Input set." << std::endl;
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
-    std::cout << "CUDA input set." << std::endl;
+    std::cout << "Input set." << std::endl;
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
-    std::cout << "Truth set." << std::endl;
 
     set_cuda_truth();
-    std::cout << "CUDA truth set." << std::endl;
+    std::cout << "Truth set." << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
