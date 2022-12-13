@@ -29,7 +29,7 @@ int CudaAdamVariable::size() {
     return data_size;
 }
 
-Adam::Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params){
+Adam::Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params) {
     step_count = 0;
     this->params = params;
     for (auto v: vars)
@@ -47,7 +47,7 @@ __global__ void adam_step_parallel(float *data, float *grad, float *m, float *v,
     data[i] -= step_size * m[i] / (sqrtf(v[i]) + eps);
 }
 
-void Adam::step(){
+void Adam::step() {
     step_count++;
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
     for (auto &var: cuda_vars) {
