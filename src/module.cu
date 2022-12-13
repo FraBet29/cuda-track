@@ -285,10 +285,12 @@ void CrossEntropyLoss::forward(bool training) {
         check_kernel_call();
         cudaDeviceSynchronize();
     }
+    /*
     check_call(cudaMemcpy(loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << *loss << std::endl;
     check_call(cudaFree(cuda_total_loss));
     check_call(cudaFree(cuda_count));
+    */
     /*
     float total_loss = 0;
     int count = 0;
