@@ -241,24 +241,31 @@ float GCN::get_l2_penalty() {
 */
 std::pair<float, float> GCN::train_epoch() {
     set_input(); // set the input data
+    std::cout << "Input set." << std::endl;
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
+    std::cout << "CUDA input set." << std::endl;
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
+    std::cout << "Truth set." << std::endl;
 
     set_cuda_truth();
+    std::cout << "CUDA truth set." << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
+    std::cout << "Forward executed." << std::endl;
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
     for (int i = modules.size() - 1; i >= 0; i--) // do a backward pass on the layers
         modules[i]->backward();
+    std::cout << "Backward executed." << std::endl;
 
     optimizer.step(); // apply a step of the adapm optimization
+    std::cout << "Adam executed." << std::endl;
 
     // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION
     // DEALLOCATE CUDA INPUT AND CUDA TRUTH AT THE END OF EACH EPOCH?
