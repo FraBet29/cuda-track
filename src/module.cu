@@ -278,12 +278,12 @@ void CrossEntropyLoss::forward(bool training) {
     crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, logits->data.size(), num_classes);
     check_kernel_call();
     cudaDeviceSynchronize();
+    /*
     std::cout << "OK 2" << std::endl;
     crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
     check_kernel_call();
     cudaDeviceSynchronize();
     std::cout << "OK 3" << std::endl;
-    /*
     if (training) {
         dim3 blocksPerGrid3((logits->grad.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
         crossentropyloss_forward_parallel3<<<blocksPerGrid3, threadsPerBlock>>>(cuda_logits->grad, cuda_count, logits->grad.size());
