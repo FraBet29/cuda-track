@@ -156,8 +156,7 @@ void GCN::set_input() {
 }
 
 void GCN::set_cuda_input() {
-    float *temp = input->data.data();
-    check_call(cudaMemcpy(cuda_input->data, temp, input->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(cuda_input->data, data->feature_value.data(), data->feature_value.size() * sizeof(float), cudaMemcpyHostToDevice));
 }
 
 // set the label of each node inside of the current_split (validation/train/test)
@@ -167,7 +166,7 @@ void GCN::set_truth(int current_split) {
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
 }
 
-void GCN::set_cuda_truth() {
+void GCN::set_cuda_truth(int current_split) {
     int *temp = truth.data();
     check_call(cudaMemcpy(cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
 }
@@ -256,7 +255,7 @@ std::pair<float, float> GCN::train_epoch() {
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
-    set_cuda_truth();
+    set_cuda_truth(1);
     std::cout << "Truth set." << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
@@ -290,7 +289,7 @@ std::pair<float, float> GCN::eval(int current_split) {
     set_cuda_input();
     std::cout << "Evaluation input set." << std::endl;
     set_truth(current_split);
-    set_cuda_truth();
+    set_cuda_truth(current_split);
     std::cout << "Evaluation truth set." << std::endl;
     for (auto m: modules)
         m->forward(false);

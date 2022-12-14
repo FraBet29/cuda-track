@@ -36,7 +36,7 @@ class GCN {
     void set_input();
     void set_cuda_input();
     void set_truth(int current_split);
-    void set_cuda_truth();
+    void set_cuda_truth(int current_split);
     float get_accuracy();
     float get_l2_penalty();
     std::pair<float, float> train_epoch();
