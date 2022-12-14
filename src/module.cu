@@ -274,16 +274,9 @@ void GraphSum::backward() {
 */
 CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
         logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
-            check_call(cudaMalloc(&cuda_loss, sizeof(float)));
-            // loss in CrossEntropyLoss loss is a pointer pointing to the loss value stored in GCN
+            // loss in CrossEntropyLoss loss is a pointer pointing to the loss value in GCN
             // cuda_loss in CrossEntropyLoss is a pointer pointing to the same GPU memory area pointed by cuda_loss in GCN
         }
-
-CrossEntropyLoss::~CrossEntropyLoss() {
-    std::cout << "Deallocating CrossEntropyLoss." << std::endl;
-    check_call(cudaFree(cuda_truth));
-    check_call(cudaFree(cuda_loss));
-}
 
 __global__ void crossentropyloss_forward_parallel1(bool training, int *truth, float *logits_data, float *logits_grad, float *total_loss, int *count, int N, int n) {
     // N: logits->data.size(), n: num_classes
@@ -340,20 +333,9 @@ void CrossEntropyLoss::forward(bool training) {
     crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, logits->data.size(), num_classes);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    check_call(cudaMemcpy(&total_loss, cuda_total_loss, sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << total_loss << std::endl;
-
-    check_call(cudaMemcpy(&count, cuda_count, sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << count << std::endl;
-
     crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    check_call(cudaMemcpy(&(*loss), cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << *loss << std::endl;
-
     if (training) {
         dim3 blocksPerGrid3((logits->grad.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
         crossentropyloss_forward_parallel3<<<blocksPerGrid3, threadsPerBlock>>>(cuda_logits->grad, cuda_count, logits->grad.size());

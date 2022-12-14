@@ -125,6 +125,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     std::cout << "Graphsum (2nd layer) initialized." << std::endl;
     
     // cross entropy loss
+    check_call(cudaMalloc(&cuda_loss, sizeof(float)));
     modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
     std::cout << "Cross entropy loss initialized." << std::endl;
 
@@ -139,6 +140,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
 GCN::~GCN(){
     for(auto m: modules)
         delete m;
+    check_call(cudaFree(cuda_truth));
+    check_call(cudaFree(cuda_loss));
 }
 
 // set the current input for the GCN model

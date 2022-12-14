@@ -61,7 +61,7 @@ class CrossEntropyLoss: public Module {
     int num_classes;
 public:
     CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes);
-    ~CrossEntropyLoss();
+    ~CrossEntropyLoss() { std::cout << "Deallocating CrossEntropyLoss." << std::endl; };
     void forward(bool);
     void backward();
 };
