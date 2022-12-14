@@ -320,8 +320,11 @@ void CrossEntropyLoss::forward(bool training) {
     timer_start(TMR_LOSS_FW);
     float total_loss = 0.0f;
     float *cuda_total_loss;
+    
     std::cout << "total_loss " << &total_loss << std::endl;
     std::cout << "cuda_total_loss " << &cuda_total_loss << std::endl;
+    std::cout << "cuda_total_loss pointing to" << &(*cuda_total_loss) << std::endl;
+
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
     check_call(cudaMemcpy(cuda_total_loss, &total_loss, sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "OK 1" << std::endl;
@@ -331,8 +334,10 @@ void CrossEntropyLoss::forward(bool training) {
     check_call(cudaMemcpy(cuda_count, &count, sizeof(int), cudaMemcpyHostToDevice));
     std::cout << "OK 2" << std::endl;
     if (training) cuda_logits->zero_grad();
+
     std::cout << "Address of cuda_truth in CEL: " << &cuda_truth << std::endl;
     std::cout << "Address of GPU memory pointed by cuda_truth in CEL (i.e. address of GPU memory pointed by cuda_truth in GCN): " << &(*cuda_truth) << std::endl;
+    
     // GPU blocks and threads settings
     dim3 blocksPerGrid1((logits->data.size() / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
