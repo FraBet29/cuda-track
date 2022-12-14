@@ -51,7 +51,6 @@ GCNParams GCNParams::get_default() {
 
 GCN::GCN(GCNParams params, GCNData *input_data) {
     init_rand_state();
-    // INITIALIZE CUDA RANDOM STATE HERE?
     this->params = params;
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
