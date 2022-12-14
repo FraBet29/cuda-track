@@ -274,7 +274,7 @@ void GraphSum::backward() {
 */
 CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
         logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
-            check_call(cudaMalloc(&cuda_loss, sizeof(float)));    
+            check_call(cudaMalloc(&cuda_loss, sizeof(float)));
         }
 
 CrossEntropyLoss::~CrossEntropyLoss() {
@@ -338,15 +338,16 @@ void CrossEntropyLoss::forward(bool training) {
     crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, logits->data.size(), num_classes);
     check_kernel_call();
     cudaDeviceSynchronize();
-    crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
-    check_kernel_call();
-    cudaDeviceSynchronize();
 
     check_call(cudaMemcpy(&total_loss, cuda_total_loss, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << total_loss << std::endl;
 
     check_call(cudaMemcpy(&count, cuda_count, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << count << std::endl;
+
+    crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
+    check_kernel_call();
+    cudaDeviceSynchronize();
 
     check_call(cudaMemcpy(&loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << loss << std::endl;
