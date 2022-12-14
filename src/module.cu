@@ -327,12 +327,10 @@ void CrossEntropyLoss::forward(bool training) {
     float *cuda_total_loss;
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
     check_call(cudaMemcpy(cuda_total_loss, &total_loss, sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "OK 0" << std::endl;
     int count = 0;
     int *cuda_count;
     check_call(cudaMalloc(&cuda_count, sizeof(int)));
     check_call(cudaMemcpy(cuda_count, &count, sizeof(int), cudaMemcpyHostToDevice));
-    std::cout << "OK 1" << std::endl;
     if (training) cuda_logits->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid1((logits->data.size() / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -340,10 +338,15 @@ void CrossEntropyLoss::forward(bool training) {
     crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, logits->data.size(), num_classes);
     check_kernel_call();
     cudaDeviceSynchronize();
-    std::cout << "OK 2" << std::endl;
     crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    check_call(cudaMemcpy(&total_loss, cuda_total_loss, sizeof(float), cudaMemcpyDeviceToHost));
+    std::cout << total_loss << std::endl;
+
+    check_call(cudaMemcpy(&count, cuda_count, sizeof(float), cudaMemcpyDeviceToHost));
+    std::cout << count << std::endl;
 
     check_call(cudaMemcpy(&loss, cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << loss << std::endl;
