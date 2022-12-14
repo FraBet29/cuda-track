@@ -144,12 +144,9 @@ void GCN::set_cuda_input() {
 
 // set the label of each node inside of the current_split (validation/train/test)
 void GCN::set_truth(int current_split) {
-    for(int i = 0; i < params.num_nodes; i++) {
+    for(int i = 0; i < params.num_nodes; i++)
         // truth[i] is the real label of "i"
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
-        std::cout << truth[i];
-    }
-    std::cout << std::endl;
 }
 
 void GCN::set_cuda_truth(int current_split) {
@@ -248,6 +245,7 @@ std::pair<float, float> GCN::train_epoch() {
         m->forward(true);
     std::cout << "Forward executed." << std::endl;
 
+    std::cout << loss << std::endl;
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
     std::cout << "Metrics computed." << std::endl;
