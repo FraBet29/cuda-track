@@ -327,6 +327,8 @@ void CrossEntropyLoss::forward(bool training) {
     check_call(cudaMalloc(&cuda_count, sizeof(int)));
     check_call(cudaMemcpy(cuda_count, &count, sizeof(int), cudaMemcpyHostToDevice));
     if (training) cuda_logits->zero_grad();
+    std::cout << "Address of cuda_truth in CEL: " << &cuda_truth << std::endl;
+    std::cout << "Address of CPU memory pointed by cuda_truth in CEL (i.e. address of cuda_truth in GCN): " << &(*cuda_truth) << std::endl;
     // GPU blocks and threads settings
     dim3 blocksPerGrid1((logits->data.size() / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);

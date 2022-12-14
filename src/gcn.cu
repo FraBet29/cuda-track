@@ -122,6 +122,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
     truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
+    std::cout << "Address of cuda_truth in GCN: " << &cuda_truth << std::endl;
     std::cout << "Graphsum (2nd layer) initialized." << std::endl;
     
     // cross entropy loss
