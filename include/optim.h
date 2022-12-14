@@ -32,7 +32,7 @@ class Adam {
     std::vector<AdamVariable> vars;
     std::vector<CudaAdamVariable> cuda_vars;
 public:
-    Adam() {}
+    Adam() {};
     Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params);
     void step();
 };
