@@ -337,6 +337,9 @@ void CrossEntropyLoss::forward(bool training) {
     check_kernel_call();
     cudaDeviceSynchronize();
 
+    std::cout << "Address of cuda_loss in CEL: " << &cuda_loss << std::endl;
+    std::cout << "Address of GPU memory pointed by cuda_loss in CEL: " << &(*cuda_loss) << std::endl;
+    std::cout << "Address of CPU memory pointed by loss in CEL (i.e. address of loss in GPU): " << &(*loss) << std::endl;
     check_call(cudaMemcpy(&(*loss), cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << *loss << std::endl;
 

@@ -126,6 +126,9 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     
     // cross entropy loss
     check_call(cudaMalloc(&cuda_loss, sizeof(float)));
+    std::cout << "Address of loss in GCN: " << &loss << std::endl;
+    std::cout << "Address of cuda_loss in GCN: " << &cuda_loss << std::endl;
+    std::cout << "Address of GPU memory pointed by cuda_loss in GCN: " << &(*cuda_loss) << std::endl;
     modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
     std::cout << "Cross entropy loss initialized." << std::endl;
 
