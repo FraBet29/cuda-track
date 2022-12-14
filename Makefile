@@ -1,5 +1,5 @@
 #CXX=gcc
-CXX=nvcc
+CXX=nvcc --generate-line-info
 #CXXFLAGS=-no-pie -O3 -g -pg -std=c++11 -Wall -Wno-sign-compare -Wno-unused-variable -Wno-unknown-pragmas
 CXXFLAGS=-O3
 LDFLAGS=-lm -lstdc++
