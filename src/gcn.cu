@@ -60,7 +60,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_variables.reserve(8);
     cuda_variables.emplace_back(data->feature_index.indices.size(), false);
     cuda_input = &cuda_variables.back();
-    std::cout << "Input initialized." << std::endl;
 
     // dropout
     modules.push_back(new Dropout(input, cuda_input, params.dropout));
@@ -68,7 +67,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     Variable *layer1_var1 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     CudaVariable *layer1_cuda_var1 = &cuda_variables.back();
-    std::cout << "Dropout (1st layer) initialized." << std::endl;
     
     variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     Variable *layer1_weight = &variables.back();
@@ -76,7 +74,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     CudaVariable *layer1_cuda_weight = &cuda_variables.back();
     layer1_cuda_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
-    std::cout << "W(0) initialized." << std::endl;
     
     // sparsematmul
     modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
@@ -84,15 +81,12 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     Variable *layer1_var2 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     CudaVariable *layer1_cuda_var2 = &cuda_variables.back();
-    std::cout << "Sparsematmul initialized." << std::endl;
 
     // graphsum
     modules.push_back(new GraphSum(layer1_var1, layer1_var2, layer1_cuda_var1, layer1_cuda_var2, &data->graph, params.hidden_dim));
-    std::cout << "Graphsum (1st layer) initialized." << std::endl;
 
     // ReLU
     modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
-    std::cout << "ReLU initialized." << std::endl;
 
     // dropout
     modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
@@ -100,7 +94,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     Variable *layer2_var1 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     CudaVariable *layer2_cuda_var1 = &cuda_variables.back();
-    std::cout << "Dropout (2nd layer) initialized." << std::endl;
     
     variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     Variable *layer2_weight = &variables.back();
@@ -108,7 +101,6 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     CudaVariable *layer2_cuda_weight = &cuda_variables.back();
     layer2_cuda_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
-    std::cout << "W(1) initialized." << std::endl;
     
     // matmul
     modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
@@ -116,30 +108,21 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     output = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     cuda_output = &cuda_variables.back();
-    std::cout << "Matmul initialized." << std::endl;
     
     // graph sum
     modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
     truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
-    std::cout << "Address of cuda_truth in GCN: " << &cuda_truth << std::endl;
-    std::cout << "Address of GPU memory pointed by cuda_truth in GCN: " << &(*cuda_truth) << std::endl;
-    std::cout << "Graphsum (2nd layer) initialized." << std::endl;
     
     // cross entropy loss
     check_call(cudaMalloc(&cuda_loss, sizeof(float)));
-    std::cout << "Address of loss in GCN: " << &loss << std::endl;
-    std::cout << "Address of cuda_loss in GCN: " << &cuda_loss << std::endl;
-    std::cout << "Address of GPU memory pointed by cuda_loss in GCN: " << &(*cuda_loss) << std::endl;
     modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
-    std::cout << "Cross entropy loss initialized." << std::endl;
 
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
     optimizer = Adam({{layer1_weight, true}, {layer2_weight, false}}, {{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
-    std::cout << "Adam initialized." << std::endl;
 }
 
 GCN::~GCN(){
@@ -161,9 +144,12 @@ void GCN::set_cuda_input() {
 
 // set the label of each node inside of the current_split (validation/train/test)
 void GCN::set_truth(int current_split) {
-    for(int i = 0; i < params.num_nodes; i++)
+    for(int i = 0; i < params.num_nodes; i++) {
         // truth[i] is the real label of "i"
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
+        std::cout << truth[i];
+    }
+    std::endl;
 }
 
 void GCN::set_cuda_truth(int current_split) {
