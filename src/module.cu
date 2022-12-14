@@ -322,10 +322,12 @@ void CrossEntropyLoss::forward(bool training) {
     float *cuda_total_loss;
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
     check_call(cudaMemcpy(cuda_total_loss, &total_loss, sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "OK 1" << std::endl;
     int count = 0;
     int *cuda_count;
     check_call(cudaMalloc(&cuda_count, sizeof(int)));
     check_call(cudaMemcpy(cuda_count, &count, sizeof(int), cudaMemcpyHostToDevice));
+    std::cout << "OK 2" << std::endl;
     if (training) cuda_logits->zero_grad();
     std::cout << "Address of cuda_truth in CEL: " << &cuda_truth << std::endl;
     std::cout << "Address of GPU memory pointed by cuda_truth in CEL (i.e. address of GPU memory pointed by cuda_truth in GCN): " << &(*cuda_truth) << std::endl;
