@@ -167,8 +167,7 @@ void GCN::set_truth(int current_split) {
 }
 
 void GCN::set_cuda_truth(int current_split) {
-    int *temp = truth.data();
-    check_call(cudaMemcpy(cuda_truth, temp, truth.size() * sizeof(int), cudaMemcpyHostToDevice));
+    check_call(cudaMemcpy(cuda_truth, truth.data(), truth.size() * sizeof(int), cudaMemcpyHostToDevice));
 }
 
 __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float *data, int N, int D) {
@@ -197,6 +196,7 @@ float GCN::get_accuracy() {
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&wrong, cuda_wrong, sizeof(int), cudaMemcpyDeviceToHost));
     check_call(cudaMemcpy(&total, cuda_total, sizeof(int), cudaMemcpyDeviceToHost));
+    std::cout << total << std::endl;
     return float(total - wrong) / total;
     /*
     int wrong = 0, total = 0;
