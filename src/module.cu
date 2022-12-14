@@ -273,8 +273,10 @@ void GraphSum::backward() {
  * Also called logaritmic loss. 
 */
 CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
-        logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(*loss), cuda_loss(cuda_loss), num_classes(num_classes) {
+        logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
             check_call(cudaMalloc(&cuda_loss, sizeof(float)));
+            // loss in CrossEntropyLoss loss is a pointer pointing to the loss value stored in GCN
+            // cuda_loss in CrossEntropyLoss is a pointer pointing to the same GPU memory area pointed by cuda_loss in GCN
         }
 
 CrossEntropyLoss::~CrossEntropyLoss() {
@@ -344,6 +346,9 @@ void CrossEntropyLoss::forward(bool training) {
 
     check_call(cudaMemcpy(&count, cuda_count, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << count << std::endl;
+
+    std::cout << &cuda_loss << std::endl;
+    std::cout << cuda_loss << std::endl;
 
     crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
     check_kernel_call();
