@@ -323,9 +323,10 @@ void CrossEntropyLoss::forward(bool training) {
     
     std::cout << "total_loss " << &total_loss << std::endl;
     std::cout << "cuda_total_loss " << &cuda_total_loss << std::endl;
-    std::cout << "cuda_total_loss pointing to" << &(*cuda_total_loss) << std::endl;
+    std::cout << "cuda_total_loss pointing to " << &(*cuda_total_loss) << std::endl;
 
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
+    std::cout << "OK 0" << std::endl;
     check_call(cudaMemcpy(cuda_total_loss, &total_loss, sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "OK 1" << std::endl;
     int count = 0;
