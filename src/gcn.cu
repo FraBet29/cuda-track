@@ -149,7 +149,7 @@ void GCN::set_truth(int current_split) {
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
         std::cout << truth[i];
     }
-    std::endl;
+    std::cout << std::endl;
 }
 
 void GCN::set_cuda_truth(int current_split) {
