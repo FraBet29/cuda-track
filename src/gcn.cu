@@ -255,7 +255,7 @@ std::pair<float, float> GCN::train_epoch() {
         m->forward(true);
     std::cout << "Forward executed." << std::endl;
 
-    float train_loss = gcn_loss + get_l2_penalty(); // correct the loss with the l2 regularization
+    float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
     std::cout << "Metrics computed." << std::endl;
     
