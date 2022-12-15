@@ -173,7 +173,6 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 
 // get the current accuracy of the model
 float GCN::get_accuracy() {
-    // CHECK!!!
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
     check_call(cudaMalloc(&cuda_wrong, sizeof(int)));
@@ -185,8 +184,8 @@ float GCN::get_accuracy() {
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&wrong, cuda_wrong, sizeof(int), cudaMemcpyDeviceToHost));
     check_call(cudaMemcpy(&total, cuda_total, sizeof(int), cudaMemcpyDeviceToHost));
-    std::cout << total << std::endl;
-    // FREE CUDA_WRONG, CUDA_TOTAL
+    check_call(cudaFree(cuda_wrong));
+    check_call(cudaFree(cuda_total));
     return float(total - wrong) / total;
 
     /*
@@ -223,7 +222,7 @@ float GCN::get_l2_penalty() {
     check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
-    // FREE CUDA_L2
+    check_call(cudaFree(cuda_l2));
     return params.weight_decay * l2 / 2;
 
     /*
