@@ -187,7 +187,6 @@ float GCN::get_accuracy() {
     check_call(cudaFree(cuda_wrong));
     check_call(cudaFree(cuda_total));
     return float(total - wrong) / total;
-
     /*
     int wrong = 0, total = 0;
     for(int i = 0; i < params.num_nodes; i++) {
@@ -224,7 +223,6 @@ float GCN::get_l2_penalty() {
     check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
     check_call(cudaFree(cuda_l2));
     return params.weight_decay * l2 / 2;
-
     /*
     float l2 = 0;
     for (int i = 0; i < variables[2].data.size(); i++) {
@@ -260,8 +258,7 @@ std::pair<float, float> GCN::train_epoch() {
 
     optimizer.step(); // apply a step of the adapm optimization
 
-    // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION
-    // DEALLOCATE CUDA INPUT AND CUDA TRUTH AT THE END OF EACH EPOCH?
+    // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION?
 
     return {train_loss, train_acc};
 }
