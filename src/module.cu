@@ -42,6 +42,8 @@ void Matmul::forward(bool training) {
     cudaDeviceSynchronize();
 
     float *temp = (float *) malloc(c->data.size() * sizeof(float));
+    std::cout << sizeof(temp) << std::endl;
+    std::cout << sizeof(cuda_c->data) << std::endl;
     check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << "1" << std::endl;
     for (int i = 0; i < c->data.size(); ++i)
