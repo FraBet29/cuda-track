@@ -61,17 +61,17 @@ void Adam::step() {
     }
     cudaDeviceSynchronize();
 
-    auto cuda_it = cuda_vars.cbegin();
+    auto cuda_it = cuda_vars.begin();
     for (auto it = vars.begin(); it != vars.end(); ++it) {
-        float *temp = (float *) malloc(*(it->data).size() * sizeof(float));
-        check_call(cudaMemcpy(temp, cuda_it->data, *(it->data).size() * sizeof(float), cudaMemcpyDeviceToHost));
-        for (int i = 0; i < *(it->data).size(); ++it)
-            *(it->data)[i] = temp[i];
+        float *temp = (float *) malloc((*it->data).size() * sizeof(float));
+        check_call(cudaMemcpy(temp, cuda_it->data, (*it->data).size() * sizeof(float), cudaMemcpyDeviceToHost));
+        for (int i = 0; i < (*it->data).size(); ++it)
+            (*it->data)[i] = temp[i];
         free(temp);
-        temp = (float *) malloc(*(it->grad).size() * sizeof(float));
-        check_call(cudaMemcpy(temp, cuda_it->grad, *(it->grad).size() * sizeof(float), cudaMemcpyDeviceToHost));
-        for (int i = 0; i < *(it->grad).size(); ++it)
-            *(it->grad)[i] = temp[i];
+        temp = (float *) malloc((*it->grad).size() * sizeof(float));
+        check_call(cudaMemcpy(temp, cuda_it->grad, (*it->grad).size() * sizeof(float), cudaMemcpyDeviceToHost));
+        for (int i = 0; i < (*it->grad).size(); ++it)
+            (*it->grad)[i] = temp[i];
         free(temp);
         temp = (float *) malloc(it->m.size() * sizeof(float));
         check_call(cudaMemcpy(temp, cuda_it->m, it->m.size() * sizeof(float), cudaMemcpyDeviceToHost));
