@@ -176,7 +176,7 @@ float GCN::get_accuracy() {
     // CHECK!!!
 
     int *temp = (int *) malloc(truth.size() * sizeof(int));
-    check_call(cudaMalloc(temp, cuda_truth, truth.size() * sizeof(int), cudaMemcpyDeviceToHost));
+    check_call(cudaMemcpy(temp, cuda_truth, truth.size() * sizeof(int), cudaMemcpyDeviceToHost));
     for (int i = 0; i < truth.size(); ++i)
         if (truth[i] != temp[i])
             std::cerr << "CUDA truth wrong!" << std::endl;
