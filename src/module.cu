@@ -29,7 +29,6 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
 
 void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
-
     cuda_c->zero();
     // GPU blocks and threads settings
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
@@ -39,13 +38,6 @@ void Matmul::forward(bool training) {
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(c->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < c->data.size(); ++i)
-        c->data[i] = temp[i];
-    free(temp);
-
    /*
     c->zero();
     for (int i = 0; i < m; i++)
@@ -53,9 +45,6 @@ void Matmul::forward(bool training) {
             for (int k = 0; k < p; k++)
                 c->data[i * p + k] += a->data[i * n + j] * b->data[j * p + k];
         }
-    
-    check_call(cudaMemcpy(cuda_c->data, c->data.data(), c->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "1" << std::endl;
     */
     timer_stop(TMR_MATMUL_FW);
 }
