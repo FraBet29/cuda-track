@@ -114,7 +114,6 @@ __global__ void sparsematmul_forward_parallel(float *a, float *b, float *c, int 
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
-
     cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -123,13 +122,6 @@ void SparseMatmul::forward(bool training) {
     sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(c->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < c->data.size(); ++i)
-        c->data[i] = temp[i];
-    free(temp);
-
     /*
     c->zero();
     for (int i = 0; i < sp->indptr.size() - 1; i++)
@@ -138,9 +130,6 @@ void SparseMatmul::forward(bool training) {
             for (int k = 0; k < p; k++)
                 c->data[i * p + k] += a->data[jj] * b->data[j * p + k];
         }
-    
-    check_call(cudaMemcpy(cuda_c->data, c->data.data(), c->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "4" << std::endl;
     */
     timer_stop(TMR_SPMATMUL_FW);
 }
@@ -158,7 +147,6 @@ __global__ void sparsematmul_backward_parallel(float *a_data, float *b_grad, flo
 
 void SparseMatmul::backward() {
     timer_start(TMR_SPMATMUL_BW);
-
     cuda_b->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -167,29 +155,14 @@ void SparseMatmul::backward() {
     sparsematmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->grad, cuda_c->grad, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(b->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < b->grad.size(); ++i)
-        b->grad[i] = temp[i];
-    free(temp);
-
     /*
     b->zero_grad();
-    // int row = 0;
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
             int j = sp->indices[jj];
             for (int k = 0; k < p; k++)
                     b->grad[j * p + k] += c->grad[i * p + k] * a->data[jj];
         }
-    
-    float *temp = (float *) malloc(b->data.size() * sizeof(float));
-    for (int i = 0; i < b->data.size(); ++i)
-        temp[i] = b->data[i];
-    check_call(cudaMemcpy(cuda_b->data, temp, b->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "5" << std::endl;
-    free(temp);
     */
     timer_stop(TMR_SPMATMUL_BW);
 }
@@ -222,7 +195,6 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
 
 void GraphSum::forward(bool training) {
     timer_start(TMR_GRAPHSUM_FW);
-
     cuda_out->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -231,13 +203,6 @@ void GraphSum::forward(bool training) {
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(out->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_out->data, out->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < out->data.size(); ++i)
-        out->data[i] = temp[i];
-    free(temp);
-
     /*
     out->zero();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
@@ -250,16 +215,12 @@ void GraphSum::forward(bool training) {
                 // This only works for undirected graphs. Should be out[dst] += coef * in[src]
                 out->data[src * dim + j] += coef * in->data[dst * dim + j];
         }
-    
-    check_call(cudaMemcpy(cuda_out->data, out->data.data(), out->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "6" << std::endl;
     */
     timer_stop(TMR_GRAPHSUM_FW);
 }
 
 void GraphSum::backward() {
     timer_start(TMR_GRAPHSUM_BW);
-
     cuda_in->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -269,13 +230,6 @@ void GraphSum::backward() {
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_out->grad, cuda_in->grad, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < in->grad.size(); ++i)
-        in->grad[i] = temp[i];
-    free(temp);
-
     /*
     in->zero_grad();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
@@ -287,13 +241,6 @@ void GraphSum::backward() {
             for (int j = 0; j < dim; j++)
                 in->grad[src * dim + j] += coef * out->grad[dst * dim + j];
         }
-    
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    for (int i = 0; i < in->grad.size(); ++i)
-        temp[i] = in->grad[i];
-    check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "7" << std::endl;
-    free(temp);
     */
     timer_stop(TMR_GRAPHSUM_BW);
 }
@@ -349,7 +296,6 @@ __global__ void crossentropyloss_forward_parallel3(float *logits_grad, int *coun
 
 void CrossEntropyLoss::forward(bool training) {
     timer_start(TMR_LOSS_FW);
-
     float total_loss = 0.0f;
     float *cuda_total_loss;
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
@@ -377,19 +323,6 @@ void CrossEntropyLoss::forward(bool training) {
     }
     check_call(cudaFree(cuda_total_loss));
     check_call(cudaFree(cuda_count));
-
-    float *temp = (float *) malloc(logits->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_logits->data, logits->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < logits->data.size(); ++i)
-        logits->data[i] = temp[i];
-    free(temp);
-
-    temp = (float *) malloc(logits->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_logits->grad, logits->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < logits->grad.size(); ++i)
-        logits->grad[i] = temp[i];
-    free(temp);
-
     /*
     float total_loss = 0;
     int count = 0;
@@ -419,12 +352,6 @@ void CrossEntropyLoss::forward(bool training) {
     if (training)
         for (float & i : logits->grad)
             i /= count;
-
-    check_call(cudaMemcpy(cuda_logits->data, logits->data.data(), logits->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "8" << std::endl;
-
-    check_call(cudaMemcpy(cuda_logits->grad, logits->grad.data(), logits->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "9" << std::endl;
     */
     timer_stop(TMR_LOSS_FW);
 }
@@ -461,7 +388,6 @@ __global__ void relu_forward_parallel(float *in, bool *mask, int N, bool trainin
 
 void ReLU::forward(bool training) {
     timer_start(TMR_RELU_FW);
-
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -469,29 +395,13 @@ void ReLU::forward(bool training) {
     relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), training);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(bool), cudaMemcpyDeviceToHost));
-    
-    float *temp = (float *) malloc(in->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_in->data, in->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < in->data.size(); ++i)
-        in->data[i] = temp[i];
-    free(temp);
-
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = in->data[i] > 0;
         if (training) mask[i] = keep;
         if (!keep) in->data[i] = 0;
     }
-    
-    check_call(cudaMemcpy(cuda_mask, mask, in->data.size() * sizeof(bool), cudaMemcpyHostToDevice));
-    std::cout << "10" << std::endl;
-    
-    check_call(cudaMemcpy(cuda_in->data, in->data.data(), in->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "11" << std::endl;
     */
-
     timer_stop(TMR_RELU_FW);
 }
 
@@ -504,30 +414,15 @@ __global__ void relu_backward_parallel(float *grad, bool *mask, int N) {
 
 void ReLU::backward() {
     timer_start(TMR_RELU_BW);
-
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     relu_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, in->data.size());
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < in->grad.size(); ++i)
-        in->grad[i] = temp[i];
-    free(temp);
-
     /*
     for (int i = 0; i < in->data.size(); i++)
         if (!mask[i]) in->grad[i] = 0;
-    
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    for (int i = 0; i < in->grad.size(); ++i)
-        temp[i] = in->grad[i];
-    check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "12" << std::endl;
-    free(temp);
     */
     timer_stop(TMR_RELU_BW);
 }
@@ -582,7 +477,6 @@ void Dropout::forward(bool training) {
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
     float scale = 1 / (1 - p);
-
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -590,29 +484,12 @@ void Dropout::forward(bool training) {
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    if (mask)
-        check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(int), cudaMemcpyDeviceToHost));
-
-    float *temp = (float *) malloc(in->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_in->data, in->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < in->data.size(); ++i)
-        in->data[i] = temp[i];
-    free(temp);
-
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int) RAND() >= threshold;
         in->data[i] *= keep ? scale : 0;
         if (mask) mask[i] = keep;
     }
-
-    if (mask)
-        check_call(cudaMemcpy(cuda_mask, mask, in->data.size() * sizeof(int), cudaMemcpyHostToDevice));
-    std::cout << "13" << std::endl;
-
-    check_call(cudaMemcpy(cuda_in->data, in->data.data(), in->data.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "14" << std::endl;
     */
     timer_stop(TMR_DROPOUT_FW);
 }
@@ -628,7 +505,6 @@ void Dropout::backward() {
     if (!mask) return;
     timer_start(TMR_DROPOUT_BW);
     float scale = 1 / (1 - p);
-
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -636,23 +512,9 @@ void Dropout::backward() {
     dropout_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, in->data.size(), scale);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < in->grad.size(); ++i)
-        in->grad[i] = temp[i];
-    free(temp);
-
     /*
     for (int i = 0; i < in->data.size(); i++)
         in->grad[i] *= mask[i] ? scale : 0;
-    
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    for (int i = 0; i < in->grad.size(); ++i)
-        temp[i] = in->grad[i];
-    check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "15" << std::endl;
-    free(temp);
     */
     timer_stop(TMR_DROPOUT_BW);
 }
