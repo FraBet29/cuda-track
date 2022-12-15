@@ -160,15 +160,14 @@ void GCN::set_cuda_truth(int current_split) {
 
 __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float *data, int N, int D) {
     for(int i = 0; i < N; i++) {
-        if(truth[i] >= 0) {
-            *total++;
-            float truth_logit = data[i * D + truth[i]];
-            for(int j = 0; j < D; j++)
-                if (data[i * D + j] > truth_logit) {
-                    *wrong++;
-                    break;
-                }
-        }
+        if(truth[i] < 0) continue;
+        *total++;
+        float truth_logit = data[i * D + truth[i]];
+        for(int j = 0; j < D; j++)
+            if (data[i * D + j] > truth_logit) {
+                *wrong++;
+                break;
+            }
     }
 }
 
@@ -187,6 +186,7 @@ float GCN::get_accuracy() {
     check_call(cudaMemcpy(&wrong, cuda_wrong, sizeof(int), cudaMemcpyDeviceToHost));
     check_call(cudaMemcpy(&total, cuda_total, sizeof(int), cudaMemcpyDeviceToHost));
     std::cout << total << std::endl;
+    // FREE CUDA_WRONG, CUDA_TOTAL
     return float(total - wrong) / total;
 
     /*
@@ -223,6 +223,7 @@ float GCN::get_l2_penalty() {
     check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
+    // FREE CUDA_L2
     return params.weight_decay * l2 / 2;
 
     /*
@@ -245,6 +246,13 @@ std::pair<float, float> GCN::train_epoch() {
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
     std::cout << "Input set." << std::endl;
+
+    float *temp = (float *) malloc(input->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_input->data, input->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < input->data.size(); i++)
+        if (input->data[i] != temp[i])
+            std::cerr << "Wrong CUDA input!" << std::endl;
+    free(temp);
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
