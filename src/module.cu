@@ -631,7 +631,7 @@ void Dropout::forward(bool training) {
     timer_start(TMR_DROPOUT_FW);
     const int threshold = int(p * MY_RAND_MAX);
     float scale = 1 / (1 - p);
-    /*
+
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -650,8 +650,8 @@ void Dropout::forward(bool training) {
     for (int i = 0; i < in->data.size(); ++i)
         in->data[i] = temp[i];
     free(temp);
-    */
 
+    /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int) RAND() >= threshold;
         in->data[i] *= keep ? scale : 0;
@@ -664,7 +664,7 @@ void Dropout::forward(bool training) {
 
     check_call(cudaMemcpy(cuda_in->data, in->data.data(), in->data.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "14" << std::endl;
-
+    */
     timer_stop(TMR_DROPOUT_FW);
 }
 
