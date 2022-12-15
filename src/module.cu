@@ -73,6 +73,7 @@ __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, in
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
+    /*
     cuda_a->zero_grad();
     cuda_b->zero_grad();
     // GPU blocks and threads settings
@@ -96,8 +97,8 @@ void Matmul::backward() {
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
+    */
 
-    /*
     a->zero_grad();
     b->zero_grad();
     for (int i = 0; i < m; i++)
@@ -109,7 +110,21 @@ void Matmul::backward() {
             }
 		    a->grad[i * n + j] = tmp;
         }
-    */
+    
+    float *temp = (float *) malloc(a->grad.size() * sizeof(float));
+    for (int i = 0; i < a->grad.size(); ++i)
+        temp[i] = a->grad[i];
+    check_call(cudaMemcpy(cuda_a->grad, temp, a->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "2" << std::endl;
+    free(temp);
+
+    temp = (float *) malloc(b->grad.size() * sizeof(float));
+    for (int i = 0; i < b->grad.size(); ++i)
+        temp[i] = b->grad[i];
+    check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    std::cout << "3" << std::endl;
+    free(temp);
+
     timer_stop(TMR_MATMUL_BW);
 }
 
@@ -180,6 +195,7 @@ __global__ void sparsematmul_backward_parallel(float *A, float *B, float *C, int
 
 void SparseMatmul::backward() {
     timer_start(TMR_SPMATMUL_BW);
+    /*
     cuda_b->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -195,8 +211,8 @@ void SparseMatmul::backward() {
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
+    */
 
-    /*
     b->zero_grad();
     // int row = 0;
     for (int i = 0; i < sp->indptr.size() - 1; i++)
@@ -205,7 +221,14 @@ void SparseMatmul::backward() {
             for (int k = 0; k < p; k++)
                     b->grad[j * p + k] += c->grad[i * p + k] * a->data[jj];
         }
-    */
+    
+    float *temp = (float *) malloc(b->data.size() * sizeof(float));
+    for (int i = 0; i < b->data.size(); ++i)
+        temp[i] = b->data[i];
+    check_call(cudaMemcpy(cuda_b->data, temp, b->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "5" << std::endl;
+    free(temp);
+
     timer_stop(TMR_SPMATMUL_BW);
 }
 
@@ -272,6 +295,7 @@ void GraphSum::forward(bool training) {
 
 void GraphSum::backward() {
     timer_start(TMR_GRAPHSUM_BW);
+    /*
     cuda_in->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -288,8 +312,8 @@ void GraphSum::backward() {
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
+    */
 
-    /*
     in->zero_grad();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
@@ -300,7 +324,14 @@ void GraphSum::backward() {
             for (int j = 0; j < dim; j++)
                 in->grad[src * dim + j] += coef * out->grad[dst * dim + j];
         }
-    */
+    
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    for (int i = 0; i < in->grad.size(); ++i)
+        temp[i] = in->grad[i];
+    check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "7" << std::endl;
+    free(temp);
+
     timer_stop(TMR_GRAPHSUM_BW);
 }
 
