@@ -42,7 +42,6 @@ void Matmul::forward(bool training) {
 
     float *temp = (float *) malloc(c->data.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "1" << std::endl;
     for (int i = 0; i < c->data.size(); ++i)
         c->data[i] = temp[i];
     free(temp);
@@ -89,14 +88,12 @@ void Matmul::backward() {
 
     float *temp = (float *) malloc(a->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_a->grad, a->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "2" << std::endl;
     for (int i = 0; i < a->grad.size(); ++i)
         a->grad[i] = temp[i];
     free(temp);
 
     temp = (float *) malloc(b->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "3" << std::endl;
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
@@ -168,7 +165,6 @@ void SparseMatmul::forward(bool training) {
 
     float *temp = (float *) malloc(c->data.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "4" << std::endl;
     for (int i = 0; i < c->data.size(); ++i)
         c->data[i] = temp[i];
     free(temp);
@@ -213,7 +209,6 @@ void SparseMatmul::backward() {
 
     float *temp = (float *) malloc(b->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "5" << std::endl;
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
@@ -278,7 +273,6 @@ void GraphSum::forward(bool training) {
 
     float *temp = (float *) malloc(out->data.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_out->data, out->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "6" << std::endl;
     for (int i = 0; i < out->data.size(); ++i)
         out->data[i] = temp[i];
     free(temp);
@@ -317,7 +311,6 @@ void GraphSum::backward() {
 
     float *temp = (float *) malloc(in->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "7" << std::endl;
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
@@ -426,14 +419,12 @@ void CrossEntropyLoss::forward(bool training) {
 
     float *temp = (float *) malloc(logits->data.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_logits->data, logits->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "8" << std::endl;
     for (int i = 0; i < logits->data.size(); ++i)
         logits->data[i] = temp[i];
     free(temp);
 
     temp = (float *) malloc(logits->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_logits->grad, logits->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "9" << std::endl;
     for (int i = 0; i < logits->grad.size(); ++i)
         logits->grad[i] = temp[i];
     free(temp);
@@ -562,7 +553,6 @@ void ReLU::backward() {
 
     float *temp = (float *) malloc(in->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "12" << std::endl;
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
@@ -642,11 +632,9 @@ void Dropout::forward(bool training) {
 
     if (mask)
         check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(int), cudaMemcpyDeviceToHost));
-    std::cout << "13" << std::endl;
 
     float *temp = (float *) malloc(in->data.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_in->data, in->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "14" << std::endl;
     for (int i = 0; i < in->data.size(); ++i)
         in->data[i] = temp[i];
     free(temp);
@@ -690,7 +678,6 @@ void Dropout::backward() {
 
     float *temp = (float *) malloc(in->grad.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "15" << std::endl;
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);

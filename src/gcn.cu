@@ -168,7 +168,7 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 
 // get the current accuracy of the model
 float GCN::get_accuracy() {
-    /*
+
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
     check_call(cudaMalloc(&cuda_wrong, sizeof(int)));
@@ -182,7 +182,8 @@ float GCN::get_accuracy() {
     check_call(cudaMemcpy(&total, cuda_total, sizeof(int), cudaMemcpyDeviceToHost));
     std::cout << total << std::endl;
     return float(total - wrong) / total;
-    */
+
+    /*
     int wrong = 0, total = 0;
     for(int i = 0; i < params.num_nodes; i++) {
         if(truth[i] < 0) continue;
@@ -195,6 +196,7 @@ float GCN::get_accuracy() {
             }
     }
     return float(total - wrong) / total;
+    */
 }
 
 __global__ void parallel_get_l2_penalty(float *l2, float *data, int N) {
