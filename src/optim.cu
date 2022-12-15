@@ -50,7 +50,7 @@ __global__ void adam_step_parallel(float *data, float *grad, float *m, float *v,
 }
 
 void Adam::step() {
-    /*
+
     step_count++;
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
     for (auto &var: cuda_vars) {
@@ -61,7 +61,7 @@ void Adam::step() {
         check_kernel_call();
     }
     cudaDeviceSynchronize();
-
+    /*
     auto cuda_it = cuda_vars.begin();
     for (auto it = vars.begin(); it != vars.end(); ++it) {
         float *temp = (float *) malloc((*it->data).size() * sizeof(float));
@@ -88,6 +88,7 @@ void Adam::step() {
     }
     */
 
+    /*
     step_count++;
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
     for (auto &var: vars) {
@@ -108,5 +109,6 @@ void Adam::step() {
         check_call(cudaMemcpy(cuda_it->v, it->v.data(), it->v.size() * sizeof(float), cudaMemcpyHostToDevice));
         ++cuda_it;
     }
+    */
 
 }
