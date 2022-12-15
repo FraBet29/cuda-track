@@ -76,7 +76,7 @@ __global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, in
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
-    /*
+
     cuda_a->zero_grad();
     cuda_b->zero_grad();
     // GPU blocks and threads settings
@@ -100,8 +100,8 @@ void Matmul::backward() {
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
-    */
 
+    /*
     a->zero_grad();
     b->zero_grad();
     for (int i = 0; i < m; i++)
@@ -127,7 +127,7 @@ void Matmul::backward() {
     check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << "3" << std::endl;
     free(temp);
-
+    */
     timer_stop(TMR_MATMUL_BW);
 }
 
