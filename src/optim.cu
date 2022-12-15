@@ -63,6 +63,7 @@ void Adam::step() {
     /*
     step_count++;
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
+    */
     for (auto &var: vars) {
         for (int i = 0; i < var.size(); i++) {
             float grad = (*var.grad)[i];
@@ -72,5 +73,4 @@ void Adam::step() {
             (*var.data)[i] -= step_size * var.m[i] / (sqrtf(var.v[i]) + params.eps);
         }
     }
-    */
 }

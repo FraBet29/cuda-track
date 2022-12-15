@@ -40,6 +40,13 @@ void Matmul::forward(bool training) {
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(c->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < c->data.size(); ++i)
+        c->data[i] = temp[i];
+    free(temp);
+
     /*
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
@@ -74,6 +81,19 @@ void Matmul::backward() {
     matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(a->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_a->grad, a->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < a->grad.size(); ++i)
+        a->grad[i] = temp[i];
+    free(temp);
+
+    temp = (float *) malloc(b->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < b->grad.size(); ++i)
+        b->grad[i] = temp[i];
+    free(temp);
+
     /*
     a->zero_grad();
     b->zero_grad();
@@ -125,6 +145,13 @@ void SparseMatmul::forward(bool training) {
     sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(c->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < c->data.size(); ++i)
+        c->data[i] = temp[i];
+    free(temp);
+
     /*
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
@@ -157,6 +184,13 @@ void SparseMatmul::backward() {
     sparsematmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->grad, cuda_c->grad, cuda_sp->indptr, cuda_sp->indices, sp->indptr.size() - 1, p);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(b->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < b->grad.size(); ++i)
+        b->grad[i] = temp[i];
+    free(temp);
+
     /*
     b->zero_grad();
     // int row = 0;
@@ -208,6 +242,13 @@ void GraphSum::forward(bool training) {
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(out->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_out->data, out->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < out->data.size(); ++i)
+        out->data[i] = temp[i];
+    free(temp);
+
     /*
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
@@ -234,6 +275,13 @@ void GraphSum::backward() {
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_out->grad, cuda_in->grad, cuda_graph->indptr, cuda_graph->indices, graph->indptr.size() - 1, dim);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < in->grad.size(); ++i)
+        in->grad[i] = temp[i];
+    free(temp);
+
     /*
     in->zero_grad();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
@@ -327,6 +375,19 @@ void CrossEntropyLoss::forward(bool training) {
     }
     check_call(cudaFree(cuda_total_loss));
     check_call(cudaFree(cuda_count));
+
+    float *temp = (float *) malloc(logits->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_logits->data, logits->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < logits->data.size(); ++i)
+        logits->data[i] = temp[i];
+    free(temp);
+
+    temp = (float *) malloc(logits->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_logits->grad, logits->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < logits->grad.size(); ++i)
+        logits->grad[i] = temp[i];
+    free(temp);
+
     /*
     float total_loss = 0;
     int count = 0;
@@ -399,6 +460,15 @@ void ReLU::forward(bool training) {
     relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), training);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(bool), cudaMemcpyDeviceToHost));
+    
+    float *temp = (float *) malloc(in->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_in->data, in->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < in->data.size(); ++i)
+        in->data[i] = temp[i];
+    free(temp);
+
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = in->data[i] > 0;
@@ -424,6 +494,13 @@ void ReLU::backward() {
     relu_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, in->data.size());
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < in->grad.size(); ++i)
+        in->grad[i] = temp[i];
+    free(temp);
+
     /*
     for (int i = 0; i < in->data.size(); i++)
         if (!mask[i]) in->grad[i] = 0;
@@ -488,6 +565,15 @@ void Dropout::forward(bool training) {
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->data.size(), threshold, scale, cuda_rand_state, MY_CUDA_RAND_MAX);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(int), cudaMemcpyDeviceToHost));
+
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < in->grad.size(); ++i)
+        in->grad[i] = temp[i];
+    free(temp);
+
     /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = (int) RAND() >= threshold;
@@ -516,6 +602,13 @@ void Dropout::backward() {
     dropout_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, in->data.size(), scale);
     check_kernel_call();
     cudaDeviceSynchronize();
+
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < in->grad.size(); ++i)
+        in->grad[i] = temp[i];
+    free(temp);
+
     /*
     for (int i = 0; i < in->data.size(); i++)
         in->grad[i] *= mask[i] ? scale : 0;
