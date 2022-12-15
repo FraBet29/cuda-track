@@ -244,27 +244,21 @@ std::pair<float, float> GCN::train_epoch() {
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input();
-    std::cout << "Input set." << std::endl;
 
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
     set_cuda_truth(1);
-    std::cout << "Truth set." << std::endl;
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
-    std::cout << "Forward executed." << std::endl;
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
-    std::cout << "Metrics computed." << std::endl;
     
     for (int i = modules.size() - 1; i >= 0; i--) // do a backward pass on the layers
         modules[i]->backward();
-    std::cout << "Backward executed." << std::endl;
 
     optimizer.step(); // apply a step of the adapm optimization
-    std::cout << "Adam executed." << std::endl;
 
     // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION
     // DEALLOCATE CUDA INPUT AND CUDA TRUTH AT THE END OF EACH EPOCH?
@@ -277,19 +271,14 @@ std::pair<float, float> GCN::train_epoch() {
  * current_split == 3 --> test
 */
 std::pair<float, float> GCN::eval(int current_split) {
-    std::cout << "Evaluation started." << std::endl;
     set_input();
     set_cuda_input();
-    std::cout << "Evaluation input set." << std::endl;
     set_truth(current_split);
     set_cuda_truth(current_split);
-    std::cout << "Evaluation truth set." << std::endl;
     for (auto m: modules)
         m->forward(false);
-    std::cout << "Evaluation forward executed." << std::endl;
     float test_loss = loss + get_l2_penalty();
     float test_acc = get_accuracy();
-    std::cout << "Evaluation ended." << std::endl;
     return {test_loss, test_acc};
 }
 
@@ -298,7 +287,6 @@ void GCN::run() {
     float total_time = 0.0;
     std::vector<float> loss_history;
     // Iterate the training process based on the selected number of epoch
-    std::cout << "Training started." << std::endl;
     for(; epoch <= params.epochs; epoch++) {
         float train_loss, train_acc, val_loss, val_acc;
         timer_start(TMR_TRAIN); // just for timing purposes

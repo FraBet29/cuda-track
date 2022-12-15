@@ -64,7 +64,6 @@ __global__ void matmul_backward_parallel(float *a_data, float *b_data, float *a_
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
-
     cuda_a->zero_grad();
     cuda_b->zero_grad();
     // GPU blocks and threads settings
@@ -74,19 +73,6 @@ void Matmul::backward() {
     matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
-
-    float *temp = (float *) malloc(a->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_a->grad, a->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < a->grad.size(); ++i)
-        a->grad[i] = temp[i];
-    free(temp);
-
-    temp = (float *) malloc(b->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < b->grad.size(); ++i)
-        b->grad[i] = temp[i];
-    free(temp);
-
    /*
     a->zero_grad();
     b->zero_grad();
@@ -99,20 +85,6 @@ void Matmul::backward() {
             }
 		    a->grad[i * n + j] = tmp;
         }
-    
-    float *temp = (float *) malloc(a->grad.size() * sizeof(float));
-    for (int i = 0; i < a->grad.size(); ++i)
-        temp[i] = a->grad[i];
-    check_call(cudaMemcpy(cuda_a->grad, temp, a->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
-    std::cout << "2" << std::endl;
-    free(temp);
-
-    temp = (float *) malloc(b->grad.size() * sizeof(float));
-    for (int i = 0; i < b->grad.size(); ++i)
-        temp[i] = b->grad[i];
-    check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "3" << std::endl;
-    free(temp);
     */
     timer_stop(TMR_MATMUL_BW);
 }
