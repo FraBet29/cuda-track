@@ -42,8 +42,6 @@ void Matmul::forward(bool training) {
     cudaDeviceSynchronize();
 
     float *temp = (float *) malloc(c->data.size() * sizeof(float));
-    std::cout << sizeof(temp) << std::endl;
-    std::cout << sizeof(cuda_c->data) << std::endl;
     check_call(cudaMemcpy(temp, cuda_c->data, c->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << "1" << std::endl;
     for (int i = 0; i < c->data.size(); ++i)
@@ -580,7 +578,8 @@ void Dropout::forward(bool training) {
     check_kernel_call();
     cudaDeviceSynchronize();
 
-    check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(int), cudaMemcpyDeviceToHost));
+    if (mask)
+        check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(int), cudaMemcpyDeviceToHost));
     std::cout << "13" << std::endl;
 
     float *temp = (float *) malloc(in->data.size() * sizeof(float));
