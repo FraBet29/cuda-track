@@ -175,9 +175,12 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 float GCN::get_accuracy() {
     // CHECK!!!
 
-    std::cout << params.num_nodes << std::endl;
-    std::cout << params.output_dim << std::endl;
-    std::cerr << std::endl;
+    float *temp = (float *) malloc(output->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_output, output->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < output->data.size(); ++i)
+        if (output->data[i] - temp[i] > 0.01 || output->data[i] - temp[i] < -0.01)
+            std::cout << "Wrong CUDA output!" << std::endl;
+    free(temp);
 
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
