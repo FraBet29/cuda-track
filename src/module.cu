@@ -16,13 +16,13 @@
 Matmul::Matmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p) : 
         a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
-__global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int n, int p) {
+__global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int k = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < m && k < p) {
         for (int j = 0; j < n; ++j)
-            C[i * p + k] += A[i * n + j] * B[j * p + k];
+            c[i * p + k] += a[i * n + j] * b[j * p + k];
     }
     // TILE-BASED MULTIPLICATION WITH SHARED MEMORY?
 }
@@ -61,29 +61,29 @@ void Matmul::forward(bool training) {
     timer_stop(TMR_MATMUL_FW);
 }
 
-__global__ void matmul_backward_parallel(float *A, float *B, float *C, int m, int n, int p) {
+__global__ void matmul_backward_parallel(float *a_data, float *b_data, float *a_grad, float *b_grad, float *c_grad, int m, int n, int p) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < m && j < n) {
         float tmp = 0;
-            for (int k = 0; k < p; k++) {
-                tmp += C[i * p + k] * B[j * p + k];
-                atomicAdd(&B[j * p + k], C[i * p + k] * A[i * n + j]); // TRY TO AVOID ATOMIC ADD
-            }
-		    A[i * n + j] = tmp;
+        for (int k = 0; k < p; k++) {
+            tmp += c_grad[i * p + k] * b_data[j * p + k];
+            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[i * n + j]); // TRY TO AVOID ATOMIC ADD
+        }
+		a_grad[i * n + j] = tmp;
     }
 }
 
 void Matmul::backward() {
     timer_start(TMR_MATMUL_BW);
-    /*
+
     cuda_a->zero_grad();
     cuda_b->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (n + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
-    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
+    matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
 
@@ -100,8 +100,8 @@ void Matmul::backward() {
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
-    */
 
+   /*
     a->zero_grad();
     b->zero_grad();
     for (int i = 0; i < m; i++)
@@ -127,7 +127,7 @@ void Matmul::backward() {
     check_call(cudaMemcpy(temp, cuda_b->grad, b->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
     std::cout << "3" << std::endl;
     free(temp);
-
+    */
     timer_stop(TMR_MATMUL_BW);
 }
 
@@ -143,13 +143,13 @@ SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *
             cuda_sp = cuda_sp_temp;
         }
 
-__global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int N, int p) {
+__global__ void sparsematmul_forward_parallel(float *a, float *b, float *c, int *indptr, int *indices, int N, int p) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int k = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < N && k < p) {
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            C[i * p + k] += A[jj] * B[j * p + k];
+            c[i * p + k] += a[jj] * b[j * p + k];
         }
     }        
 }
@@ -188,13 +188,13 @@ void SparseMatmul::forward(bool training) {
     timer_stop(TMR_SPMATMUL_FW);
 }
 
-__global__ void sparsematmul_backward_parallel(float *A, float *B, float *C, int *indptr, int *indices, int N, int p) {
+__global__ void sparsematmul_backward_parallel(float *a_data, float *b_grad, float *c_grad, int *indptr, int *indices, int N, int p) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int k = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < N && k < p) {
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            atomicAdd(&B[j * p + k], C[i * p + k] * A[jj]); // TRY TO AVOID ATOMIC ADD
+            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[jj]); // TRY TO AVOID ATOMIC ADD
         }
     }
 }
