@@ -304,7 +304,7 @@ void GraphSum::forward(bool training) {
 
 void GraphSum::backward() {
     timer_start(TMR_GRAPHSUM_BW);
-    /*
+
     cuda_in->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -321,8 +321,8 @@ void GraphSum::backward() {
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
-    */
 
+    /*
     in->zero_grad();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
@@ -340,7 +340,7 @@ void GraphSum::backward() {
     check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "7" << std::endl;
     free(temp);
-
+    */
     timer_stop(TMR_GRAPHSUM_BW);
 }
 
