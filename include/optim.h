@@ -24,6 +24,7 @@ struct CudaAdamVariable {
 public:
     int size();
     CudaAdamVariable(CudaVariable*, bool);
+    ~CudaAdamVariable();
 };
 
 class Adam {
@@ -34,6 +35,7 @@ class Adam {
 public:
     Adam() {};
     Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params);
+    ~Adam() { std::cout << "Deallocating Adam." << std::endl; };
     void step();
 };
 

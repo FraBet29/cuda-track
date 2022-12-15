@@ -25,6 +25,11 @@ CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
         check_call(cudaMemcpy(v, temp.data(), var->size * sizeof(float), cudaMemcpyHostToDevice));
     }
 
+CudaAdamVariable::~CudaAdamVariable() {
+    check_call(cudaFree(m));
+    check_call(cudaFree(v));
+}
+
 int CudaAdamVariable::size() {
     return data_size;
 }
