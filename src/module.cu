@@ -530,6 +530,7 @@ __global__ void relu_backward_parallel(float *grad, bool *mask, int N) {
 
 void ReLU::backward() {
     timer_start(TMR_RELU_BW);
+    /*
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -543,11 +544,18 @@ void ReLU::backward() {
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
+    */
 
-    /*
     for (int i = 0; i < in->data.size(); i++)
         if (!mask[i]) in->grad[i] = 0;
-    */
+    
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    for (int i = 0; i < in->grad.size(); ++i)
+        temp[i] = in->grad[i];
+    check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "12" << std::endl;
+    free(temp);
+
     timer_stop(TMR_RELU_BW);
 }
 
@@ -641,6 +649,7 @@ void Dropout::backward() {
     if (!mask) return;
     timer_start(TMR_DROPOUT_BW);
     float scale = 1 / (1 - p);
+    /*
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -655,11 +664,18 @@ void Dropout::backward() {
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
+    */
 
-    /*
     for (int i = 0; i < in->data.size(); i++)
         in->grad[i] *= mask[i] ? scale : 0;
-    */
+    
+    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
+    for (int i = 0; i < in->grad.size(); ++i)
+        temp[i] = in->grad[i];
+    check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "15" << std::endl;
+    free(temp);
+
     timer_stop(TMR_DROPOUT_BW);
 }
 
