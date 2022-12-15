@@ -160,14 +160,15 @@ void GCN::set_cuda_truth(int current_split) {
 
 __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float *data, int N, int D) {
     for(int i = 0; i < N; i++) {
-        if(truth[i] < 0) continue;
-        *total++;
-        float truth_logit = data[i * D + truth[i]];
-        for(int j = 0; j < D; j++)
-            if (data[i * D + j] > truth_logit) {
-                *wrong++;
-                break;
-            }
+        if(truth[i] >= 0) {
+            *total++;
+            float truth_logit = data[i * D + truth[i]];
+            for(int j = 0; j < D; j++)
+                if (data[i * D + j] > truth_logit) {
+                    *wrong++;
+                    break;
+                }
+        }
     }
 }
 
