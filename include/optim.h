@@ -1,4 +1,5 @@
 #ifndef OPTIM_H
+#include <iostream>
 #include <vector>
 #include <utility>
 #include "variable.h"
