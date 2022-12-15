@@ -21,17 +21,15 @@ __global__ void matmul_forward_parallel(float *A, float *B, float *C, int m, int
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int k = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < m && k < p) {
-        int index = i * p + k;
-        C[index] = 0.0f;
         for (int j = 0; j < n; ++j)
-            C[index] += A[i * n + j] * B[j * p + k];
+            C[i * p + k] += A[i * n + j] * B[j * p + k];
     }
     // TILE-BASED MULTIPLICATION WITH SHARED MEMORY?
 }
 
 void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
-    c->zero();
+    cuda_c->zero();
     // GPU blocks and threads settings
     // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -49,6 +47,7 @@ void Matmul::forward(bool training) {
     free(temp);
 
     /*
+    c->zero();
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++) {
             for (int k = 0; k < p; k++)
@@ -144,18 +143,16 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int k = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < N && k < p) {
-        int index = i * p + k;
-        C[index] = 0.0f;
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            C[index] += A[jj] * B[j * p + k];
+            C[i * p + k] += A[jj] * B[j * p + k];
         }
     }        
 }
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
-    c->zero();
+    cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
@@ -172,6 +169,7 @@ void SparseMatmul::forward(bool training) {
     free(temp);
 
     /*
+    c->zero();
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
             int j = sp->indices[jj];
@@ -247,22 +245,20 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
     int src = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if (src < N && j < dim) {
-        int index = src * dim + j;
-        out[index] = 0.0f;
         for (int i = indptr[src]; i < indptr[src + 1]; i++) {
             int dst = indices[i];
             float coef = 1.0 / sqrtf(
                     (indptr[src + 1] - indptr[src]) * (indptr[dst + 1] - indptr[dst])
             );
             // This only works for undirected graphs. Should be out[dst] += coef * in[src]
-            out[index] += coef * in[dst * dim + j];
+            out[src * dim + j] += coef * in[dst * dim + j];
         }
     }        
 }
 
 void GraphSum::forward(bool training) {
     timer_start(TMR_GRAPHSUM_FW);
-    out->zero();
+    cuda_out->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
@@ -279,6 +275,7 @@ void GraphSum::forward(bool training) {
     free(temp);
 
     /*
+    out->zero();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
             int dst = graph->indices[i];
