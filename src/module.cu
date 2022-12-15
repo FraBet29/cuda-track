@@ -519,11 +519,9 @@ void ReLU::forward(bool training) {
     cudaDeviceSynchronize();
 
     check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(bool), cudaMemcpyDeviceToHost));
-    std::cout << "10" << std::endl;
     
     float *temp = (float *) malloc(in->data.size() * sizeof(float));
     check_call(cudaMemcpy(temp, cuda_in->data, in->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "11" << std::endl;
     for (int i = 0; i < in->data.size(); ++i)
         in->data[i] = temp[i];
     free(temp);
@@ -554,7 +552,7 @@ __global__ void relu_backward_parallel(float *grad, bool *mask, int N) {
 
 void ReLU::backward() {
     timer_start(TMR_RELU_BW);
-    /*
+
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -568,8 +566,8 @@ void ReLU::backward() {
     for (int i = 0; i < in->grad.size(); ++i)
         in->grad[i] = temp[i];
     free(temp);
-    */
 
+    /*
     for (int i = 0; i < in->data.size(); i++)
         if (!mask[i]) in->grad[i] = 0;
     
@@ -579,7 +577,7 @@ void ReLU::backward() {
     check_call(cudaMemcpy(cuda_in->grad, temp, in->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "12" << std::endl;
     free(temp);
-
+    */
     timer_stop(TMR_RELU_BW);
 }
 
