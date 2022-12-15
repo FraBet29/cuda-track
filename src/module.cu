@@ -156,7 +156,7 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
-    /*
+
     cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -172,8 +172,8 @@ void SparseMatmul::forward(bool training) {
     for (int i = 0; i < c->data.size(); ++i)
         c->data[i] = temp[i];
     free(temp);
-    */
 
+    /*
     c->zero();
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
@@ -184,7 +184,7 @@ void SparseMatmul::forward(bool training) {
     
     check_call(cudaMemcpy(cuda_c->data, c->data.data(), c->data.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "4" << std::endl;
-
+    */
     timer_stop(TMR_SPMATMUL_FW);
 }
 
@@ -201,7 +201,7 @@ __global__ void sparsematmul_backward_parallel(float *A, float *B, float *C, int
 
 void SparseMatmul::backward() {
     timer_start(TMR_SPMATMUL_BW);
-    /*
+
     cuda_b->zero_grad();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -217,8 +217,8 @@ void SparseMatmul::backward() {
     for (int i = 0; i < b->grad.size(); ++i)
         b->grad[i] = temp[i];
     free(temp);
-    */
 
+    /*
     b->zero_grad();
     // int row = 0;
     for (int i = 0; i < sp->indptr.size() - 1; i++)
@@ -234,7 +234,7 @@ void SparseMatmul::backward() {
     check_call(cudaMemcpy(cuda_b->data, temp, b->data.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "5" << std::endl;
     free(temp);
-
+    */
     timer_stop(TMR_SPMATMUL_BW);
 }
 
