@@ -174,6 +174,13 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 // get the current accuracy of the model
 float GCN::get_accuracy() {
     // CHECK!!!
+
+    int *temp = (int *) malloc(truth.size() * sizeof(int));
+    check_call(cudaMalloc(temp, cuda_truth, truth.size() * sizeof(int), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < truth.size(); ++i)
+        if (truth[i] != temp[i])
+            std::cerr << "CUDA truth wrong!" << std::endl;
+
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
     check_call(cudaMalloc(&cuda_wrong, sizeof(int)));
@@ -251,13 +258,6 @@ std::pair<float, float> GCN::train_epoch() {
 
     set_cuda_truth(1);
     std::cout << "Truth set." << std::endl;
-
-    int *temp = (int *) malloc(truth.size() * sizeof(int));
-    check_call(cudaMemcpy(temp, cuda_truth, truth.size() * sizeof(int), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < truth.size(); i++)
-        if (truth[i] != temp[i])
-            std::cerr << "Wrong CUDA truth!" << std::endl;
-    free(temp);
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
