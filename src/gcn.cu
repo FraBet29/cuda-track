@@ -161,11 +161,11 @@ void GCN::set_cuda_truth(int current_split) {
 __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float *data, int N, int D) {
     for(int i = 0; i < N; i++) {
         if(truth[i] < 0) continue;
-        *total++;
+        (*total)++;
         float truth_logit = data[i * D + truth[i]];
         for(int j = 0; j < D; j++)
             if (data[i * D + j] > truth_logit) {
-                *wrong++;
+                (*wrong)++;
                 break;
             }
     }
@@ -174,14 +174,6 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 // get the current accuracy of the model
 float GCN::get_accuracy() {
     // CHECK!!!
-
-    float *temp = (float *) malloc(output->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_output->data, output->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < output->data.size(); ++i)
-        if (output->data[i] - temp[i] > 0.01 || output->data[i] - temp[i] < -0.01)
-            std::cout << "Wrong CUDA output!" << std::endl;
-    free(temp);
-
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
     check_call(cudaMalloc(&cuda_wrong, sizeof(int)));
