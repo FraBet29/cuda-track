@@ -152,6 +152,7 @@ __global__ void sparsematmul_forward_parallel(float *A, float *B, float *C, int 
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
+    /*
     cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -167,8 +168,8 @@ void SparseMatmul::forward(bool training) {
     for (int i = 0; i < c->data.size(); ++i)
         c->data[i] = temp[i];
     free(temp);
+    */
 
-    /*
     c->zero();
     for (int i = 0; i < sp->indptr.size() - 1; i++)
         for (int jj = sp->indptr[i]; jj < sp->indptr[i + 1]; jj++) {
@@ -176,7 +177,10 @@ void SparseMatmul::forward(bool training) {
             for (int k = 0; k < p; k++)
                 c->data[i * p + k] += a->data[jj] * b->data[j * p + k];
         }
-    */
+    
+    check_call(cudaMemcpy(cuda_c->data, c->data.data(), c->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "4" << std::endl;
+
     timer_stop(TMR_SPMATMUL_FW);
 }
 
@@ -258,6 +262,7 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
 
 void GraphSum::forward(bool training) {
     timer_start(TMR_GRAPHSUM_FW);
+    /*
     cuda_out->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((graph->indptr.size() - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
@@ -273,8 +278,8 @@ void GraphSum::forward(bool training) {
     for (int i = 0; i < out->data.size(); ++i)
         out->data[i] = temp[i];
     free(temp);
+    */
 
-    /*
     out->zero();
     for (int src = 0; src < graph->indptr.size() - 1; src++)
         for (int i = graph->indptr[src]; i < graph->indptr[src + 1]; i++) {
@@ -286,7 +291,10 @@ void GraphSum::forward(bool training) {
                 // This only works for undirected graphs. Should be out[dst] += coef * in[src]
                 out->data[src * dim + j] += coef * in->data[dst * dim + j];
         }
-    */
+    
+    check_call(cudaMemcpy(cuda_out->data, out->data.data(), out->data.size() * sizeof(float), cudaMemcpyHostToDevice));
+    std::cout << "6" << std::endl;
+
     timer_stop(TMR_GRAPHSUM_FW);
 }
 
