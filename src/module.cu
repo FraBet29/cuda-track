@@ -395,7 +395,7 @@ __global__ void crossentropyloss_forward_parallel3(float *logits_grad, int *coun
 
 void CrossEntropyLoss::forward(bool training) {
     timer_start(TMR_LOSS_FW);
-    /*
+
     float total_loss = 0.0f;
     float *cuda_total_loss;
     check_call(cudaMalloc(&cuda_total_loss, sizeof(float)));
@@ -437,8 +437,8 @@ void CrossEntropyLoss::forward(bool training) {
     for (int i = 0; i < logits->grad.size(); ++i)
         logits->grad[i] = temp[i];
     free(temp);
-    */
 
+    /*
     float total_loss = 0;
     int count = 0;
     if (training) logits->zero_grad();
@@ -473,7 +473,7 @@ void CrossEntropyLoss::forward(bool training) {
 
     check_call(cudaMemcpy(cuda_logits->grad, logits->grad.data(), logits->grad.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "9" << std::endl;
-
+    */
     timer_stop(TMR_LOSS_FW);
 }
 
