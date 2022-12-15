@@ -175,11 +175,9 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 float GCN::get_accuracy() {
     // CHECK!!!
 
-    int *temp = (int *) malloc(truth.size() * sizeof(int));
-    check_call(cudaMemcpy(temp, cuda_truth, truth.size() * sizeof(int), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < truth.size(); ++i)
-        if (truth[i] != temp[i])
-            std::cerr << "CUDA truth wrong!" << std::endl;
+    std::cout << params.num_nodes << std::endl;
+    std::cout << params.output_dim << std::endl;
+    std::cerr << std::endl;
 
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
