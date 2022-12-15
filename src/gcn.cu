@@ -247,17 +247,17 @@ std::pair<float, float> GCN::train_epoch() {
     set_cuda_input();
     std::cout << "Input set." << std::endl;
 
-    float *temp = (float *) malloc(input->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_input->data, input->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < input->data.size(); i++)
-        if (input->data[i] != temp[i])
-            std::cerr << "Wrong CUDA input!" << std::endl;
-    free(temp);
-
     set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
     set_cuda_truth(1);
     std::cout << "Truth set." << std::endl;
+
+    int *temp = (int *) malloc(truth.size() * sizeof(int));
+    check_call(cudaMemcpy(temp, cuda_truth, truth.size() * sizeof(int), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < truth.size(); i++)
+        if (truth[i] != temp[i])
+            std::cerr << "Wrong CUDA truth!" << std::endl;
+    free(temp);
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
