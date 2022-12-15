@@ -568,10 +568,10 @@ void Dropout::forward(bool training) {
 
     check_call(cudaMemcpy(mask, cuda_mask, in->data.size() * sizeof(int), cudaMemcpyDeviceToHost));
 
-    float *temp = (float *) malloc(in->grad.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_in->grad, in->grad.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < in->grad.size(); ++i)
-        in->grad[i] = temp[i];
+    float *temp = (float *) malloc(in->data.size() * sizeof(float));
+    check_call(cudaMemcpy(temp, cuda_in->data, in->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < in->data.size(); ++i)
+        in->data[i] = temp[i];
     free(temp);
 
     /*
