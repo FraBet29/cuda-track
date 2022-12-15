@@ -509,7 +509,7 @@ __global__ void relu_forward_parallel(float *in, bool *mask, int N, bool trainin
 
 void ReLU::forward(bool training) {
     timer_start(TMR_RELU_FW);
-    /*
+
     // GPU blocks and threads settings
     dim3 blocksPerGrid((in->data.size() + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -527,8 +527,8 @@ void ReLU::forward(bool training) {
     for (int i = 0; i < in->data.size(); ++i)
         in->data[i] = temp[i];
     free(temp);
-    */
 
+    /*
     for (int i = 0; i < in->data.size(); i++) {
         bool keep = in->data[i] > 0;
         if (training) mask[i] = keep;
@@ -540,6 +540,7 @@ void ReLU::forward(bool training) {
     
     check_call(cudaMemcpy(cuda_in->data, in->data.data(), in->data.size() * sizeof(float), cudaMemcpyHostToDevice));
     std::cout << "11" << std::endl;
+    */
 
     timer_stop(TMR_RELU_FW);
 }
