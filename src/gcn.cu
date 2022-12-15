@@ -176,7 +176,7 @@ float GCN::get_accuracy() {
     // CHECK!!!
 
     float *temp = (float *) malloc(output->data.size() * sizeof(float));
-    check_call(cudaMemcpy(temp, cuda_output, output->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    check_call(cudaMemcpy(temp, cuda_output->data, output->data.size() * sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i < output->data.size(); ++i)
         if (output->data[i] - temp[i] > 0.01 || output->data[i] - temp[i] < -0.01)
             std::cout << "Wrong CUDA output!" << std::endl;
