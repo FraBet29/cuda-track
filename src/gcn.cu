@@ -150,7 +150,12 @@ void GCN::set_truth(int current_split) {
 }
 
 void GCN::set_cuda_truth(int current_split) {
-    check_call(cudaMemcpy(cuda_truth, truth.data(), truth.size() * sizeof(int), cudaMemcpyHostToDevice));
+    int *temp = (int *) malloc(params.num_nodes * sizeof(int));
+    for(int i = 0; i < params.num_nodes; i++)
+        // truth[i] is the real label of "i"
+        temp[i] = data->split[i] == current_split ? data->label[i] : -1;
+    check_call(cudaMemcpy(cuda_truth, temp, params.num_nodes * sizeof(int), cudaMemcpyHostToDevice));
+    free(temp);
 }
 
 __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float *data, int N, int D) {
@@ -168,7 +173,7 @@ __global__ void parallel_get_accuracy(int *wrong, int *total, int *truth, float 
 
 // get the current accuracy of the model
 float GCN::get_accuracy() {
-
+    // CHECK!!!
     int wrong = 0, total = 0;
     int *cuda_wrong, *cuda_total;
     check_call(cudaMalloc(&cuda_wrong, sizeof(int)));
