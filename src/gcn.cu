@@ -123,6 +123,8 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
     optimizer = Adam({{layer1_weight, true}, {layer2_weight, false}}, {{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
+
+    std::cout << "GCN allocated." << std::endl;
 }
 
 GCN::~GCN(){
@@ -247,8 +249,12 @@ std::pair<float, float> GCN::train_epoch() {
 
     set_cuda_truth(1);
 
+    std::cout << "Input and truth set." << std::endl;
+
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
+
+    std::cout << "Forward executed." << std::endl;
 
     float train_loss = loss + get_l2_penalty(); // correct the loss with the l2 regularization
     float train_acc = get_accuracy(); // compute the accuracy comparing the prediction against the truth
@@ -256,7 +262,11 @@ std::pair<float, float> GCN::train_epoch() {
     for (int i = modules.size() - 1; i >= 0; i--) // do a backward pass on the layers
         modules[i]->backward();
 
+    std::cout << "Backward executed." << std::endl;
+
     optimizer.step(); // apply a step of the adapm optimization
+
+    std::cout << "Optimizer executed." << std::endl;
 
     // IMPLEMENT TRANSFER FROM DEVICE TO HOST AT THE END OF THE EXECUTION?
 
