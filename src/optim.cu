@@ -28,7 +28,6 @@ CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
 CudaAdamVariable::~CudaAdamVariable() {
     check_call(cudaFree(m));
     check_call(cudaFree(v));
-    std::cout << "cudaFree executed." << std::endl;
 }
 
 int CudaAdamVariable::size() {

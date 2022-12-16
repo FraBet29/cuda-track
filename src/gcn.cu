@@ -122,7 +122,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     AdamParams adam_params = AdamParams::get_default();
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
-    optimizer = Adam({{layer1_weight, true}, {layer2_weight, false}}, {{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
+    optimizer = new Adam({{layer1_weight, true}, {layer2_weight, false}}, {{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
 
     std::cout << "GCN allocated." << std::endl;
 }
@@ -264,7 +264,7 @@ std::pair<float, float> GCN::train_epoch() {
 
     std::cout << "Backward executed." << std::endl;
 
-    optimizer.step(); // apply a step of the adapm optimization
+    optimizer->step(); // apply a step of the adapm optimization
 
     std::cout << "Optimizer executed." << std::endl;
 
