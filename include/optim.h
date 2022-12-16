@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <utility>
-#include "variable.h"
+//#include "variable.h"
 #include "cuda_variable.h"
 
 struct AdamParams {

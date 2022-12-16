@@ -1,7 +1,7 @@
 #ifndef GCN_H
 #include <vector>
 #include <utility>
-#include "variable.h"
+//#include "variable.h"
 #include "sparse.h"
 #include "module.h"
 #include "optim.h"

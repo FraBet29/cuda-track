@@ -1,5 +1,5 @@
 #include "../include/module.h"
-#include "../include/rand.h"
+//#include "../include/rand.h"
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
 #include "../include/cuda_rand.h"

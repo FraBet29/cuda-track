@@ -1,7 +1,7 @@
 #ifndef MODULE_H
 
 //#include <immintrin.h>
-#include "variable.h"
+//#include "variable.h"
 #include "sparse.h"
 #include "cuda_variable.h"
 #include "cuda_rand.h"
