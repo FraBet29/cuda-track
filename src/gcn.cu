@@ -10,8 +10,8 @@
  * they will be overwritten by the parser when reading the dataset
 */
 GCNParams GCNParams::get_default() {
-    /*
-    return { // citeseer
+    ///*
+    return { // CITESEER
         3327,   // num_nodes
         3703,   // input_dim
         16,     // hidden_dim
@@ -22,9 +22,9 @@ GCNParams GCNParams::get_default() {
         100,    // epochs
         0};     // early_stopping
     
-    */
+    //*/
 
-    ///*
+    /*
     return { // CORA
         2708,   // num_nodes
         1433,   // input_dim
@@ -35,9 +35,10 @@ GCNParams GCNParams::get_default() {
         5e-4,   // weight_decay
         100,    // epochs
         0};     // early_stopping
-    //*/
+    */
 
-    /*return { // PUBMED
+    /*
+    return { // PUBMED
         19717,   // num_nodes
         500,   // input_dim
         16,     // hidden_dim
@@ -46,7 +47,21 @@ GCNParams GCNParams::get_default() {
         0.01,   // learning_rate
         5e-4,   // weight_decay
         100,    // epochs
-        0};     // early_stopping*/
+        0};     // early_stopping
+    */
+
+    /*
+    return { // REDDIT
+        232965,   // num_nodes
+        602,   // input_dim
+        128,     // hidden_dim
+        41,      // output_dim
+        0.5,    // dropouyt
+        0.01,   // learning_rate
+        5e-4,   // weight_decay
+        100,    // epochs
+        0};     // early_stopping
+    */
 }
 
 GCN::GCN(GCNParams params, GCNData *input_data) {
