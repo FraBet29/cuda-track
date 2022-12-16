@@ -5,8 +5,6 @@
 #include <curand_kernel.h>
 #include <math.h>
 
-#define MY_RAND_MAX 0x7fffffff
-
 __global__ void rand_setup_kernel(curandState *state, int N);
 
 

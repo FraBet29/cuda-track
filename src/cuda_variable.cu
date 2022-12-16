@@ -1,5 +1,5 @@
 #include "../include/cuda_variable.h"
-//#include "../include/rand.h"
+#include "../include/rand.h"
 #include "../include/cuda_check.h"
 #include <cmath>
 #include <cstdio>
