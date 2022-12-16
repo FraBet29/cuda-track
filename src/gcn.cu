@@ -219,7 +219,7 @@ float GCN::get_l2_penalty() {
     float *cuda_l2;
     check_call(cudaMalloc(&cuda_l2, sizeof(float)));
     check_call(cudaMemcpy(cuda_l2, &l2, sizeof(float), cudaMemcpyHostToDevice));
-    parallel_get_l2_penalty<<<1, 1>>>(cuda_l2, cuda_variables[2].data, variables[2].data.size());
+    parallel_get_l2_penalty<<<1, 1>>>(cuda_l2, cuda_variables[2].data, cuda_variables[2].size);
     check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
