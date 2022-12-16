@@ -36,7 +36,7 @@ class Adam {
 public:
     Adam() {};
     Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params);
-    ~Adam() { std::cout << "Deallocating Adam." << std::endl; };
+    //~Adam() { std::cout << "Deallocating Adam." << std::endl; };
     void step();
 };
 
