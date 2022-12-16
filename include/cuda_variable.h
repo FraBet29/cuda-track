@@ -1,7 +1,7 @@
 #ifndef CUDA_VARIABLE_H
 
 struct CudaVariable {
-    float *data, *grad;
+    float *data, *grad = nullptr;
     int size;
     float *local_grad; // ?
     CudaVariable(int size, bool requires_grad=true, bool thread_local_grad=false);
