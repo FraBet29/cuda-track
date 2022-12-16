@@ -13,8 +13,8 @@
 /**
  * Dense matrix multiplication layer. 
 */
-Matmul::Matmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p) : 
-        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
+Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p) : 
+        cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
@@ -95,8 +95,8 @@ void Matmul::backward() {
 /**
  * A sparse matrix multiplication layer.
 */
-SparseMatmul::SparseMatmul(Variable *a, Variable *b, Variable *c, CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p) :
-        a(a), b(b), c(c), cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), sp(sp), m(m), n(n), p(p) {
+SparseMatmul::SparseMatmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p) :
+        cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {
             CudaSparseIndex *cuda_sp_temp = new CudaSparseIndex(sp->indices.data(), sp->indptr.data(), sp->indices.size(), sp->indptr.size());
             cuda_sp = cuda_sp_temp;
         }
@@ -172,8 +172,8 @@ void SparseMatmul::backward() {
 /**
  * A specialized sparse matrix multiplication for graphs.
 */
-GraphSum::GraphSum(Variable *in, Variable *out, CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim) :
-        in(in), out(out), cuda_in(cuda_in), cuda_out(cuda_out), graph(graph), dim(dim) {
+GraphSum::GraphSum(CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim) :
+        cuda_in(cuda_in), cuda_out(cuda_out), dim(dim) {
             CudaSparseIndex *cuda_graph_temp = new CudaSparseIndex(graph->indices.data(), graph->indptr.data(), graph->indices.size(), graph->indptr.size());
             cuda_graph = cuda_graph_temp;
         }
@@ -251,8 +251,8 @@ void GraphSum::backward() {
  * Each predicted class probability is compared to the actual class desired and a loss is computed to penalize the proabability based on how far it is with respect to the actual expected value.
  * Also called logaritmic loss. 
 */
-CrossEntropyLoss::CrossEntropyLoss(Variable *logits, CudaVariable *cuda_logits, int *truth, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
-        logits(logits), cuda_logits(cuda_logits), truth(truth), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
+CrossEntropyLoss::CrossEntropyLoss(CudaVariable *cuda_logits, int *cuda_truth, float *loss, float *cuda_loss, int num_classes) :
+        logits(logits), cuda_logits(cuda_logits), cuda_truth(cuda_truth), loss(loss), cuda_loss(cuda_loss), num_classes(num_classes) {
             // loss in CrossEntropyLoss loss is a pointer pointing to the loss value in GCN
             // cuda_loss in CrossEntropyLoss is a pointer pointing to the same GPU memory area pointed by cuda_loss in GCN
         }
@@ -364,16 +364,16 @@ void CrossEntropyLoss::backward() {}
  * Rectified Linear Unit activation function.
  * If input is negative it will output 0.
 */
-ReLU::ReLU(Variable *in, CudaVariable *cuda_in) {
-    this->in = in;
+ReLU::ReLU(CudaVariable *cuda_in) {
+    //this->in = in;
     this->cuda_in = cuda_in;
-    mask = new bool[in->data.size()];
+    //mask = new bool[in->data.size()];
     check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(bool)));
 }
 
 ReLU::~ReLU() {
     std::cout << "Deallocating ReLU." << std::endl;
-    delete[] mask;
+    //delete[] mask;
     check_call(cudaFree(cuda_mask));
 }
 
@@ -434,15 +434,15 @@ void ReLU::backward() {
  * Inputs that are not set to 0 are scaled up by 1/(1-P).
 */
 Dropout::Dropout(Variable *in, CudaVariable *cuda_in, float p) {
-    this->in = in;
+    //this->in = in;
     this->cuda_in = cuda_in;
     this->p = p;
     if (!in->grad.empty()) {
-        mask = new int[in->data.size()];
+        //mask = new int[in->data.size()];
         check_call(cudaMalloc(&cuda_mask, in->data.size() * sizeof(int)));
     }
     else {
-        mask = nullptr;
+        //mask = nullptr;
         cuda_mask = nullptr;
     }
     // GPU blocks and threads settings
@@ -457,7 +457,7 @@ Dropout::Dropout(Variable *in, CudaVariable *cuda_in, float p) {
 
 Dropout::~Dropout() {
     std::cout << "Deallocating Dropout." << std::endl;
-    if (mask) delete[] mask;
+    //if (mask) delete[] mask;
     if (cuda_mask) check_call(cudaFree(cuda_mask));
 }
 

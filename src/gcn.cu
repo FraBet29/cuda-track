@@ -50,73 +50,73 @@ GCNParams GCNParams::get_default() {
 }
 
 GCN::GCN(GCNParams params, GCNData *input_data) {
-    init_rand_state();
+    //init_rand_state();
     this->params = params;
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
-    variables.reserve(8);
-    variables.emplace_back(data->feature_index.indices.size(), false);
-    input = &variables.back();
+    //variables.reserve(8);
+    //variables.emplace_back(data->feature_index.indices.size(), false);
+    //input = &variables.back();
     cuda_variables.reserve(8);
     cuda_variables.emplace_back(data->feature_index.indices.size(), false);
     cuda_input = &cuda_variables.back();
 
     // dropout
-    modules.push_back(new Dropout(input, cuda_input, params.dropout));
-    variables.emplace_back(params.num_nodes * params.hidden_dim);
-    Variable *layer1_var1 = &variables.back();
+    modules.push_back(new Dropout(cuda_input, params.dropout));
+    //variables.emplace_back(params.num_nodes * params.hidden_dim);
+    //Variable *layer1_var1 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     CudaVariable *layer1_cuda_var1 = &cuda_variables.back();
     
-    variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
-    Variable *layer1_weight = &variables.back();
-    layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
+    //variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
+    //Variable *layer1_weight = &variables.back();
+    //layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
     cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     CudaVariable *layer1_cuda_weight = &cuda_variables.back();
     layer1_cuda_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
     
     // sparsematmul
-    modules.push_back(new SparseMatmul(input, layer1_weight, layer1_var1, cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
-    variables.emplace_back(params.num_nodes * params.hidden_dim);
-    Variable *layer1_var2 = &variables.back();
+    modules.push_back(new SparseMatmul(cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
+    //variables.emplace_back(params.num_nodes * params.hidden_dim);
+    //Variable *layer1_var2 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     CudaVariable *layer1_cuda_var2 = &cuda_variables.back();
 
     // graphsum
-    modules.push_back(new GraphSum(layer1_var1, layer1_var2, layer1_cuda_var1, layer1_cuda_var2, &data->graph, params.hidden_dim));
+    modules.push_back(new GraphSum(layer1_cuda_var1, layer1_cuda_var2, &data->graph, params.hidden_dim));
 
     // ReLU
-    modules.push_back(new ReLU(layer1_var2, layer1_cuda_var2));
+    modules.push_back(new ReLU(layer1_cuda_var2));
 
     // dropout
-    modules.push_back(new Dropout(layer1_var2, layer1_cuda_var2, params.dropout));
-    variables.emplace_back(params.num_nodes * params.output_dim);
-    Variable *layer2_var1 = &variables.back();
+    modules.push_back(new Dropout(layer1_cuda_var2, params.dropout));
+    //variables.emplace_back(params.num_nodes * params.output_dim);
+    //Variable *layer2_var1 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     CudaVariable *layer2_cuda_var1 = &cuda_variables.back();
     
-    variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
-    Variable *layer2_weight = &variables.back();
-    layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
+    //variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
+    //Variable *layer2_weight = &variables.back();
+    //layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
     cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     CudaVariable *layer2_cuda_weight = &cuda_variables.back();
     layer2_cuda_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
     
     // matmul
-    modules.push_back(new Matmul(layer1_var2, layer2_weight, layer2_var1, layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
-    variables.emplace_back(params.num_nodes * params.output_dim);
-    output = &variables.back();
+    modules.push_back(new Matmul(layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
+    //variables.emplace_back(params.num_nodes * params.output_dim);
+    //output = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     cuda_output = &cuda_variables.back();
     
     // graph sum
-    modules.push_back(new GraphSum(layer2_var1, output, layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
-    truth = std::vector<int>(params.num_nodes);
+    modules.push_back(new GraphSum(layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
+    //truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
     
     // cross entropy loss
     check_call(cudaMalloc(&cuda_loss, sizeof(float)));
-    modules.push_back(new CrossEntropyLoss(output, cuda_output, truth.data(), cuda_truth, &loss, cuda_loss, params.output_dim));
+    modules.push_back(new CrossEntropyLoss(cuda_output, cuda_truth, &loss, cuda_loss, params.output_dim));
 
     // Adam optimization algorithm (alternative to the classical stochastic gradient descent)
     AdamParams adam_params = AdamParams::get_default();
@@ -132,23 +132,25 @@ GCN::~GCN(){
     check_call(cudaFree(cuda_loss));
 }
 
-// set the current input for the GCN model
+/*
 void GCN::set_input() {
     for (int i = 0; i < input->data.size(); i++)
         input->data[i] = data->feature_value[i];
 }
-
+*/
+// set the current input for the GCN model
 void GCN::set_cuda_input() {
     check_call(cudaMemcpy(cuda_input->data, data->feature_value.data(), data->feature_value.size() * sizeof(float), cudaMemcpyHostToDevice));
 }
 
-// set the label of each node inside of the current_split (validation/train/test)
+/*
 void GCN::set_truth(int current_split) {
     for(int i = 0; i < params.num_nodes; i++)
         // truth[i] is the real label of "i"
         truth[i] = data->split[i] == current_split ? data->label[i] : -1;
 }
-
+*/
+// set the label of each node inside of the current_split (validation/train/test)
 void GCN::set_cuda_truth(int current_split) {
     int *temp = (int *) malloc(params.num_nodes * sizeof(int));
     for(int i = 0; i < params.num_nodes; i++)
@@ -237,15 +239,15 @@ float GCN::get_l2_penalty() {
  * Train an epoch of the model
 */
 std::pair<float, float> GCN::train_epoch() {
-    set_input(); // set the input data
+    //set_input(); // set the input data
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
-    set_cuda_input();
+    set_cuda_input(); // set the input data
 
-    set_truth(1); // get the true labels for the dataset with split == 1 (train)
+    //set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
-    set_cuda_truth(1);
+    set_cuda_truth(1); // get the true labels for the dataset with split == 1 (train)
 
     for (auto m: modules) // iterate over the layer applying a forward pass
         m->forward(true);
@@ -266,9 +268,9 @@ std::pair<float, float> GCN::train_epoch() {
  * current_split == 3 --> test
 */
 std::pair<float, float> GCN::eval(int current_split) {
-    set_input();
+    //set_input();
     set_cuda_input();
-    set_truth(current_split);
+    //set_truth(current_split);
     set_cuda_truth(current_split);
     for (auto m: modules)
         m->forward(false);
