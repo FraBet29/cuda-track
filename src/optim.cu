@@ -17,7 +17,7 @@ int AdamVariable::size() {
 }
 */
 CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
-    data(var->data), grad(var->grad), data_size(var->size), decay(decay) {
+    data(var->data), grad(var->grad), size(var->size), decay(decay) {
         std::vector<float> temp(var->size, 0.0f);
         check_call(cudaMalloc(&m, var->size * sizeof(float)));
         check_call(cudaMalloc(&v, var->size * sizeof(float)));
@@ -28,10 +28,6 @@ CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
 CudaAdamVariable::~CudaAdamVariable() {
     //check_call(cudaFree(m));
     //check_call(cudaFree(v));
-}
-
-int CudaAdamVariable::size() {
-    return data_size;
 }
 
 Adam::Adam(std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params) {
@@ -59,9 +55,9 @@ void Adam::step() {
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
     for (auto &var: cuda_vars) {
         // GPU blocks and threads settings
-        dim3 blocksPerGrid((var.size() + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, 1, 1);
+        dim3 blocksPerGrid((var.size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, 1, 1);
         dim3 threadsPerBlock(MAX_NUM_THREADS, 1, 1);
-        adam_step_parallel<<<blocksPerGrid, threadsPerBlock>>>(var.data, var.grad, var.m, var.v, var.decay, step_size, params.weight_decay, params.beta1, params.beta2, params.eps, var.size());
+        adam_step_parallel<<<blocksPerGrid, threadsPerBlock>>>(var.data, var.grad, var.m, var.v, var.decay, step_size, params.weight_decay, params.beta1, params.beta2, params.eps, var.size);
         check_kernel_call();
     }
     cudaDeviceSynchronize();

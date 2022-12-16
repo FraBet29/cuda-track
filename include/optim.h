@@ -21,9 +21,7 @@ public:
 struct CudaAdamVariable {
     float *data, *grad, *m, *v;
     bool decay;
-    int data_size;
-public:
-    int size();
+    int size;
     CudaAdamVariable(CudaVariable*, bool);
     ~CudaAdamVariable();
 };
