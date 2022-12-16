@@ -365,15 +365,12 @@ void CrossEntropyLoss::backward() {}
  * If input is negative it will output 0.
 */
 ReLU::ReLU(CudaVariable *cuda_in) {
-    //this->in = in;
     this->cuda_in = cuda_in;
-    //mask = new bool[in->data.size()];
     check_call(cudaMalloc(&cuda_mask, cuda_in->size * sizeof(bool)));
 }
 
 ReLU::~ReLU() {
     std::cout << "Deallocating ReLU." << std::endl;
-    //delete[] mask;
     check_call(cudaFree(cuda_mask));
 }
 
@@ -434,17 +431,12 @@ void ReLU::backward() {
  * Inputs that are not set to 0 are scaled up by 1/(1-P).
 */
 Dropout::Dropout(CudaVariable *cuda_in, float p) {
-    //this->in = in;
     this->cuda_in = cuda_in;
     this->p = p;
-    if (cuda_in->grad) { // CHECK IF IT IS NULLPTR
-        //mask = new int[in->data.size()];
+    if (cuda_in->grad) // CHECK IF IT IS NOT NULLPTR
         check_call(cudaMalloc(&cuda_mask, cuda_in->size * sizeof(int)));
-    }
-    else {
-        //mask = nullptr;
+    else
         cuda_mask = nullptr;
-    }
     // GPU blocks and threads settings
     dim3 blocksPerGrid((cuda_in->size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
@@ -457,7 +449,6 @@ Dropout::Dropout(CudaVariable *cuda_in, float p) {
 
 Dropout::~Dropout() {
     std::cout << "Deallocating Dropout." << std::endl;
-    //if (mask) delete[] mask;
     if (cuda_mask) check_call(cudaFree(cuda_mask));
 }
 

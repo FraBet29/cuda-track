@@ -1,7 +1,6 @@
 #ifndef GCN_H
 #include <vector>
 #include <utility>
-//#include "variable.h"
 #include "sparse.h"
 #include "module.h"
 #include "optim.h"
@@ -24,18 +23,13 @@ public:
 
 class GCN {
     std::vector<Module*> modules;
-    //std::vector<Variable> variables;
     std::vector<CudaVariable> cuda_variables;
-    //Variable *input, *output;
     CudaVariable *cuda_input, *cuda_output;
-    //std::vector<int> truth;
     int *cuda_truth;
     Adam *optimizer;
     float loss;
     float *cuda_loss;
-    //void set_input();
     void set_cuda_input();
-    //void set_truth(int current_split);
     void set_cuda_truth(int current_split);
     float get_accuracy();
     float get_l2_penalty();

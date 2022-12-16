@@ -1,7 +1,5 @@
 #ifndef MODULE_H
 
-//#include <immintrin.h>
-//#include "variable.h"
 #include "sparse.h"
 #include "cuda_variable.h"
 #include "cuda_rand.h"
@@ -15,7 +13,6 @@ public:
 };
 
 class Matmul: public Module {
-    //Variable *a, *b, *c;
     CudaVariable *cuda_a, *cuda_b, *cuda_c;
     int m, n, p;
 public:
@@ -26,9 +23,7 @@ public:
 };
 
 class SparseMatmul: public Module {
-    //Variable *a, *b, *c;
     CudaVariable *cuda_a, *cuda_b, *cuda_c;
-    //SparseIndex *sp;
     CudaSparseIndex *cuda_sp;
     int m, n, p;
 public:
@@ -39,9 +34,7 @@ public:
 };
 
 class GraphSum: public Module {
-    //Variable *in, *out;
     CudaVariable *cuda_in, *cuda_out;
-    //SparseIndex *graph;
     CudaSparseIndex *cuda_graph;
     int dim;
 public:
@@ -52,9 +45,7 @@ public:
 };
 
 class CrossEntropyLoss: public Module {
-    //Variable *logits;
     CudaVariable *cuda_logits;
-    //int *truth;
     int *cuda_truth;
     float *loss;
     float *cuda_loss;
@@ -67,9 +58,7 @@ public:
 };
 
 class ReLU: public Module {
-    //Variable *in;
     CudaVariable *cuda_in;
-    //bool *mask;
     bool *cuda_mask;
 public:
     ReLU(CudaVariable *cuda_in);
@@ -79,9 +68,7 @@ public:
 };
 
 class Dropout: public Module {
-    //Variable *in;
     CudaVariable *cuda_in;
-    //int *mask;
     int *cuda_mask;
     float p;
     curandState *cuda_rand_state;

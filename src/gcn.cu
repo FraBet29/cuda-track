@@ -54,31 +54,21 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     this->params = params;
     data = input_data;
     modules.reserve(8); // allocate the space for the 8 modules/layers
-    //variables.reserve(8);
-    //variables.emplace_back(data->feature_index.indices.size(), false);
-    //input = &variables.back();
     cuda_variables.reserve(8);
     cuda_variables.emplace_back(data->feature_index.indices.size(), false);
     cuda_input = &cuda_variables.back();
 
     // dropout
     modules.push_back(new Dropout(cuda_input, params.dropout));
-    //variables.emplace_back(params.num_nodes * params.hidden_dim);
-    //Variable *layer1_var1 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     CudaVariable *layer1_cuda_var1 = &cuda_variables.back();
     
-    //variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
-    //Variable *layer1_weight = &variables.back();
-    //layer1_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
     cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     CudaVariable *layer1_cuda_weight = &cuda_variables.back();
     layer1_cuda_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
     
     // sparsematmul
     modules.push_back(new SparseMatmul(cuda_input, layer1_cuda_weight, layer1_cuda_var1, &data->feature_index, params.num_nodes, params.input_dim, params.hidden_dim));
-    //variables.emplace_back(params.num_nodes * params.hidden_dim);
-    //Variable *layer1_var2 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.hidden_dim);
     CudaVariable *layer1_cuda_var2 = &cuda_variables.back();
 
@@ -90,28 +80,20 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
 
     // dropout
     modules.push_back(new Dropout(layer1_cuda_var2, params.dropout));
-    //variables.emplace_back(params.num_nodes * params.output_dim);
-    //Variable *layer2_var1 = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     CudaVariable *layer2_cuda_var1 = &cuda_variables.back();
     
-    //variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
-    //Variable *layer2_weight = &variables.back();
-    //layer2_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
     cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     CudaVariable *layer2_cuda_weight = &cuda_variables.back();
     layer2_cuda_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
     
     // matmul
     modules.push_back(new Matmul(layer1_cuda_var2, layer2_cuda_weight, layer2_cuda_var1, params.num_nodes, params.hidden_dim, params.output_dim));
-    //variables.emplace_back(params.num_nodes * params.output_dim);
-    //output = &variables.back();
     cuda_variables.emplace_back(params.num_nodes * params.output_dim);
     cuda_output = &cuda_variables.back();
     
     // graph sum
     modules.push_back(new GraphSum(layer2_cuda_var1, cuda_output, &data->graph, params.output_dim));
-    //truth = std::vector<int>(params.num_nodes);
     check_call(cudaMalloc(&cuda_truth, params.num_nodes * sizeof(int)));
     
     // cross entropy loss
@@ -132,24 +114,11 @@ GCN::~GCN(){
     check_call(cudaFree(cuda_loss));
 }
 
-/*
-void GCN::set_input() {
-    for (int i = 0; i < input->data.size(); i++)
-        input->data[i] = data->feature_value[i];
-}
-*/
 // set the current input for the GCN model
 void GCN::set_cuda_input() {
     check_call(cudaMemcpy(cuda_input->data, data->feature_value.data(), data->feature_value.size() * sizeof(float), cudaMemcpyHostToDevice));
 }
 
-/*
-void GCN::set_truth(int current_split) {
-    for(int i = 0; i < params.num_nodes; i++)
-        // truth[i] is the real label of "i"
-        truth[i] = data->split[i] == current_split ? data->label[i] : -1;
-}
-*/
 // set the label of each node inside of the current_split (validation/train/test)
 void GCN::set_cuda_truth(int current_split) {
     int *temp = (int *) malloc(params.num_nodes * sizeof(int));
@@ -239,13 +208,10 @@ float GCN::get_l2_penalty() {
  * Train an epoch of the model
 */
 std::pair<float, float> GCN::train_epoch() {
-    //set_input(); // set the input data
 
     // Data transfer from host to device
     // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input(); // set the input data
-
-    //set_truth(1); // get the true labels for the dataset with split == 1 (train)
 
     set_cuda_truth(1); // get the true labels for the dataset with split == 1 (train)
 
@@ -268,9 +234,7 @@ std::pair<float, float> GCN::train_epoch() {
  * current_split == 3 --> test
 */
 std::pair<float, float> GCN::eval(int current_split) {
-    //set_input();
     set_cuda_input();
-    //set_truth(current_split);
     set_cuda_truth(current_split);
     for (auto m: modules)
         m->forward(false);
@@ -281,7 +245,6 @@ std::pair<float, float> GCN::eval(int current_split) {
 
 void GCN::run() {
     int epoch = 1;
-    //float total_time = 0.0;
     std::vector<float> loss_history;
     // Iterate the training process based on the selected number of epoch
     for(; epoch <= params.epochs; epoch++) {
