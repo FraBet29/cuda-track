@@ -392,7 +392,7 @@ void ReLU::forward(bool training) {
     dim3 blocksPerGrid((cuda_in->size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
-    relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, in->size, training);
+    relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, cuda_in->size, training);
     check_kernel_call();
     cudaDeviceSynchronize();
     /*
