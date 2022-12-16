@@ -8,14 +8,14 @@
 AdamParams AdamParams::get_default() {
     return {0.001, 0.9, 0.999, 1e-8, 0.0};
 }
-
+/*
 AdamVariable::AdamVariable(Variable *var, bool decay):
     data(&var->data), grad(&var->grad), m(var->data.size(), 0.0), v(var->data.size(), 0.0), decay(decay) {}
 
 int AdamVariable::size() {
     return data->size();
 }
-
+*/
 CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
     data(var->data), grad(var->grad), data_size(var->size), decay(decay) {
         std::vector<float> temp(var->size, 0.0f);
@@ -34,11 +34,11 @@ int CudaAdamVariable::size() {
     return data_size;
 }
 
-Adam::Adam(std::vector<std::pair<Variable*, bool>> vars, std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params) {
+Adam::Adam(std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params) {
     step_count = 0;
     this->params = params;
-    for (auto v: vars)
-        this->vars.emplace_back(v.first, v.second);
+    //for (auto v: vars)
+    //    this->vars.emplace_back(v.first, v.second);
     for (auto v: cuda_vars)
         this->cuda_vars.emplace_back(v.first, v.second);
 }

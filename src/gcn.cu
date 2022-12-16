@@ -122,7 +122,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     AdamParams adam_params = AdamParams::get_default();
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
-    optimizer = new Adam({{layer1_weight, true}, {layer2_weight, false}}, {{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
+    optimizer = new Adam({{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
 }
 
 GCN::~GCN(){
@@ -281,7 +281,7 @@ std::pair<float, float> GCN::eval(int current_split) {
 
 void GCN::run() {
     int epoch = 1;
-    float total_time = 0.0;
+    //float total_time = 0.0;
     std::vector<float> loss_history;
     // Iterate the training process based on the selected number of epoch
     for(; epoch <= params.epochs; epoch++) {
