@@ -308,7 +308,7 @@ void CrossEntropyLoss::forward(bool training) {
     // GPU blocks and threads settings
     dim3 blocksPerGrid1((cuda_logits->size / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
-    crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, logits->size, num_classes);
+    crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, cuda_logits->size, num_classes);
     check_kernel_call();
     cudaDeviceSynchronize();
     crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
@@ -415,7 +415,7 @@ __global__ void relu_backward_parallel(float *grad, bool *mask, int N) {
 void ReLU::backward() {
     timer_start(TMR_RELU_BW);
     // GPU blocks and threads settings
-    dim3 blocksPerGrid((in->size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 blocksPerGrid((cuda_in->size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     relu_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, cuda_in->size);
     check_kernel_call();
@@ -437,7 +437,7 @@ Dropout::Dropout(CudaVariable *cuda_in, float p) {
     //this->in = in;
     this->cuda_in = cuda_in;
     this->p = p;
-    if (!in->grad.empty()) {
+    if (cuda_in->grad) { // CHECK IF IT IS NULLPTR
         //mask = new int[in->data.size()];
         check_call(cudaMalloc(&cuda_mask, cuda_in->size * sizeof(int)));
     }
@@ -502,7 +502,7 @@ __global__ void dropout_backward_parallel(float *grad, int *mask, int N, float s
 }
 
 void Dropout::backward() {
-    if (!mask) return;
+    if (!cuda_mask) return;
     timer_start(TMR_DROPOUT_BW);
     float scale = 1 / (1 - p);
     // GPU blocks and threads settings
