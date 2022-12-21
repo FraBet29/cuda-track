@@ -7,7 +7,7 @@
 
 #define MY_RAND_MAX 0x7fffffff
 
-__global__ void rand_setup_kernel(curandState *state, int N);
+__global__ void rand_setup_kernel(curandState *state, int seed = 1234, int N);
 
 
 #define CUDA_RAND_H
