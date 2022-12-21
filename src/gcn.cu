@@ -80,6 +80,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     
     cuda_variables.emplace_back(params.input_dim * params.hidden_dim, true, true);
     CudaVariable *layer1_cuda_weight = &cuda_variables.back();
+    std::cout << params.input_dim * params.hidden_dim << std::endl;
     layer1_cuda_weight->glorot(params.input_dim, params.hidden_dim); // weights initilization
     
     // sparsematmul
@@ -100,6 +101,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     
     cuda_variables.emplace_back(params.hidden_dim * params.output_dim, true, true);
     CudaVariable *layer2_cuda_weight = &cuda_variables.back();
+    std::cout << params.hidden_dim * params.output_dim << std::endl;
     layer2_cuda_weight->glorot(params.hidden_dim, params.output_dim); // weights initilization
     
     // matmul
