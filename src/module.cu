@@ -454,7 +454,7 @@ Dropout::~Dropout() {
 
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int j = i * blockDim.x; j < size && j < i * (blockDim.x + 1); ++j) {
+    for (int j = i * blockDim.x; j < N && j < i * (blockDim.x + 1); ++j) {
         float my_randf = rand_max * curand_uniform(&rand_state[j]);
         int my_rand = (int) truncf(my_randf);
         bool keep = my_rand >= threshold;
