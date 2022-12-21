@@ -26,8 +26,8 @@ CudaVariable::~CudaVariable() {
 
 __global__ void glorot_parallel(float *data, float range, int size, curandState *rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int j = i * blockDim.x; j < size && j < i * (blockDim.x + 1); ++j)
-        data[j] = (curand_uniform(&rand_state[j]) / MY_RAND_MAX - 0.5) * range * 2;
+    if (i < size)
+        data[i] = (curand_uniform(&rand_state[i]) / MY_RAND_MAX - 0.5) * range * 2;
 }
 
 void CudaVariable::glorot(int in_size, int out_size) {

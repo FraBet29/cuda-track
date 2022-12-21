@@ -259,8 +259,8 @@ CrossEntropyLoss::CrossEntropyLoss(CudaVariable *cuda_logits, int *cuda_truth, f
 
 __global__ void crossentropyloss_forward_parallel1(bool training, int *truth, float *logits_data, float *logits_grad, float *total_loss, int *count, int N, int n) {
     // N: logits->data.size(), n: num_classes
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int i = index * blockDim.x; i < N / n && i < index * (blockDim.x + 1); ++i) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N / n) {
         if (truth[i] >= 0) {
             atomicAdd(&(*count), 1);
             float *logit = &logits_data[i * n]; // each thread works on a different chunk of logits_data
@@ -289,8 +289,8 @@ __global__ void crossentropyloss_forward_parallel2(float *loss, float *total_los
 }
 
 __global__ void crossentropyloss_forward_parallel3(float *logits_grad, int *count, int N) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int i = index * blockDim.x; i < N && i < index * (blockDim.x + 1); ++i)
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N)
         logits_grad[i] /= *count;
 }
 
@@ -375,8 +375,8 @@ ReLU::~ReLU() {
 }
 
 __global__ void relu_forward_parallel(float *in, bool *mask, int N, bool training) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int i = index * blockDim.x; i < N && i < index * (blockDim.x + 1); ++i) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
         bool keep = in[i] > 0;
         if (training) mask[i] = keep;
         if (!keep) in[i] = 0.0f;
@@ -403,8 +403,8 @@ void ReLU::forward(bool training) {
 }
 
 __global__ void relu_backward_parallel(float *grad, bool *mask, int N) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int i = index * blockDim.x; i < N && i < index * (blockDim.x + 1); ++i) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
         if (!mask[i]) grad[i] = 0.0f;
     }
 }
@@ -453,8 +453,8 @@ Dropout::~Dropout() {
 }
 
 __global__ void dropout_forward_parallel(float *in, int* mask, int N, const int threshold, float scale, curandState *rand_state, unsigned rand_max) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int i = index * blockDim.x; i < N && i < index * (blockDim.x + 1); ++i) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
         float my_randf = rand_max * curand_uniform(&rand_state[i]);
         int my_rand = (int) truncf(my_randf);
         bool keep = my_rand >= threshold;
@@ -486,8 +486,8 @@ void Dropout::forward(bool training) {
 }
 
 __global__ void dropout_backward_parallel(float *grad, int *mask, int N, float scale) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    for (int i = index * blockDim.x; i < N && i < index * (blockDim.x + 1); ++i) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < N) {
         grad[i] *= mask[i] ? scale : 0.0f;
     }
 }
