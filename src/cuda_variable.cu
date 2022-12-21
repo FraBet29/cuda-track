@@ -34,7 +34,7 @@ void CudaVariable::glorot(int in_size, int out_size) {
     curandState *cuda_rand_state;
     // Initialize CUDA random
     check_call(cudaMalloc(&cuda_rand_state, size * sizeof(curandState)));
-    rand_setup_kernel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(cuda_rand_state, 1234, size);
+    rand_setup_kernel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(cuda_rand_state, size, 1234);
     check_kernel_call();
     cudaDeviceSynchronize();
     float range = sqrtf(6.0f / (in_size + out_size)); 

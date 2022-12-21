@@ -442,7 +442,7 @@ Dropout::Dropout(CudaVariable *cuda_in, float p) {
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Initialize CUDA random
     check_call(cudaMalloc(&cuda_rand_state, cuda_in->size * sizeof(curandState)));
-    rand_setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state, 5678, cuda_in->size);
+    rand_setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state, cuda_in->size, 5678);
     check_kernel_call();
     cudaDeviceSynchronize();
 }
