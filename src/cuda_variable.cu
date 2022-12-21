@@ -27,14 +27,14 @@ CudaVariable::~CudaVariable() {
 __global__ void glorot_parallel(float *data, float range, int size, curandState *rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < size)
-        data[i] = (curand_uniform(&rand_state[i]) / MY_RAND_MAX - 0.5) * range * 2;
+        data[i] = (curand_uniform(&rand_state[i]) - 0.5) * range * 2;
 }
 
 void CudaVariable::glorot(int in_size, int out_size) {
     curandState *cuda_rand_state;
     // Initialize CUDA random
     check_call(cudaMalloc(&cuda_rand_state, size * sizeof(curandState)));
-    rand_setup_kernel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(cuda_rand_state, size, in_size * out_size);
+    rand_setup_kernel<<<(size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, MAX_NUM_THREADS>>>(cuda_rand_state, size);
     check_kernel_call();
     cudaDeviceSynchronize();
     float range = sqrtf(6.0f / (in_size + out_size)); 
