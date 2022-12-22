@@ -194,6 +194,7 @@ float GCN::get_accuracy() {
 }
 
 __global__ void parallel_get_l2_penalty(float *l2, float *data, int N) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N) {
         float x = data[i];
         atomicAdd(l2, x * x);
