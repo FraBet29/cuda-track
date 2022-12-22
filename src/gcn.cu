@@ -125,6 +125,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
 GCN::~GCN(){
     for(auto m: modules)
         delete m;
+    delete optimizer;
     check_call(cudaFree(cuda_truth));
     check_call(cudaFree(cuda_loss));
 }

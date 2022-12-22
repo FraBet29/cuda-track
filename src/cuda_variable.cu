@@ -21,7 +21,6 @@ CudaVariable::~CudaVariable() {
 
 /**
  * Glorot (Xavier) method for weights initialization
- * WHAT IS WRONG WITH THE PARALLEL VERSION? CHANGE SEED FOR EVERY ALLOCATED WEIGHT! E.G. USE IN_SIZE AND OUT_SIZE
 */
 
 __global__ void glorot_parallel(float *data, float range, int size, curandState *rand_state) {
