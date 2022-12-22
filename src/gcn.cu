@@ -118,9 +118,7 @@ GCN::GCN(GCNParams params, GCNData *input_data) {
     AdamParams adam_params = AdamParams::get_default();
     adam_params.lr = params.learning_rate;
     adam_params.weight_decay = params.weight_decay;
-    std::cout << "ok 1" << std::endl;
     optimizer = new Adam({{layer1_cuda_weight, true}, {layer2_cuda_weight, false}}, adam_params);
-    std::cout << "ok 2" << std::endl;
 }
 
 GCN::~GCN(){

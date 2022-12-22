@@ -20,8 +20,8 @@ CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
 
 CudaAdamVariable::~CudaAdamVariable() {
     std::cout << "Deallocating CudaAdamVariable" << std::endl;
-    if(m) std::cout << &m << std::endl;
-    if(v) std::cout << &v << std::endl;
+    if(m) std::cout << &(*m) << std::endl;
+    if(v) std::cout << &(*v) << std::endl;
     check_call(cudaFree(m));
     check_call(cudaFree(v));
 }
