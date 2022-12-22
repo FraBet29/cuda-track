@@ -28,6 +28,7 @@ int main(int argc, char **argv) {
     // Get GPU info
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
+    std::cout << "Printing device properties." << std::endl;
     std::cout << "  Device name: " << prop.name << std::endl;
     std::cout << "  Global memory (GB): " << (float) prop.totalGlobalMem / 1.0e9 << std::endl;
     std::cout << "  Shared memory per block (KB) " << (float) prop.sharedMemPerBlock / 1.0e3 << std::endl;

@@ -194,9 +194,9 @@ float GCN::get_accuracy() {
 }
 
 __global__ void parallel_get_l2_penalty(float *l2, float *data, int N) {
-    for (int i = 0; i < N; i++) {
+    if (i < N) {
         float x = data[i];
-        *l2 += x * x;
+        atomicAdd(l2, x * x);
     }
 }
 
@@ -207,7 +207,9 @@ float GCN::get_l2_penalty() {
     float *cuda_l2;
     check_call(cudaMalloc(&cuda_l2, sizeof(float)));
     check_call(cudaMemcpy(cuda_l2, &l2, sizeof(float), cudaMemcpyHostToDevice));
-    parallel_get_l2_penalty<<<1, 1>>>(cuda_l2, cuda_variables[2].data, cuda_variables[2].size);
+    dim3 blocksPerGrid((cuda_variables[2].size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    parallel_get_l2_penalty<<<blocksPerGrid, threadsPerBlock>>>(cuda_l2, cuda_variables[2].data, cuda_variables[2].size);
     check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
