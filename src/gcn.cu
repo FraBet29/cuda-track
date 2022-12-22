@@ -167,7 +167,7 @@ float GCN::get_accuracy() {
     check_call(cudaMalloc(&cuda_total, sizeof(int)));
     check_call(cudaMemcpy(cuda_wrong, &wrong, sizeof(int), cudaMemcpyHostToDevice));
     check_call(cudaMemcpy(cuda_total, &total, sizeof(int), cudaMemcpyHostToDevice));
-    dim3 blocksPerGrid((cuda_output->data + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+    dim3 blocksPerGrid((params.num_nodes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     parallel_get_accuracy<<<blocksPerGrid, threadsPerBlock>>>(cuda_wrong, cuda_total, cuda_truth, cuda_output->data, params.num_nodes, params.output_dim);
     check_kernel_call();
