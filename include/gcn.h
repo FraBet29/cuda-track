@@ -37,8 +37,8 @@ class GCN {
     std::pair<float, float> eval(int current_split);
     GCNData *data;
 public:
+    GCN() {};
     GCN(GCNParams params, GCNData *data);
-    GCN();
     GCNParams params;
     ~GCN();
     void run();

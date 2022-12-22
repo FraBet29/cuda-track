@@ -9,6 +9,5 @@
 
 __global__ void rand_setup_kernel(curandState *state, int N, int seed = 1234);
 
-
 #define CUDA_RAND_H
 #endif

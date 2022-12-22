@@ -13,6 +13,5 @@ struct CudaVariable {
     float grad_norm();
 };
 
-
 #define CUDA_VARIABLE_H
 #endif

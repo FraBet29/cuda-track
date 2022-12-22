@@ -2,14 +2,14 @@
 
 class CudaSparseIndex {
 public:
-    CudaSparseIndex(int *indices, int *indptr, int indices_size, int indptr_size);
-    ~CudaSparseIndex();
     int *indices;
     int *indptr;
     int indices_size;
     int indptr_size;
+    CudaSparseIndex() {};
+    CudaSparseIndex(int *indices, int *indptr, int indices_size, int indptr_size);
+    ~CudaSparseIndex();
 };
-
 
 #define CUDA_SPARSE_H
 #endif

@@ -23,14 +23,12 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
         for (int j = 0; j < n; ++j)
             c[i * p + k] += a[i * n + j] * b[j * p + k];
     }
-    // TILE-BASED MULTIPLICATION WITH SHARED MEMORY?
 }
 
 void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
     cuda_c->zero();
     // GPU blocks and threads settings
-    // WE ASSUME THAT ALL BLOCKS FIT INTO SHARED MEMORY (4MB)
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
     // Launch kernel
@@ -432,7 +430,7 @@ void ReLU::backward() {
 Dropout::Dropout(CudaVariable *cuda_in, float p) {
     this->cuda_in = cuda_in;
     this->p = p;
-    if (cuda_in->grad) // CHECK IF IT IS NOT NULLPTR
+    if (cuda_in->grad)
         check_call(cudaMalloc(&cuda_mask, cuda_in->size * sizeof(int)));
     else
         cuda_mask = nullptr;

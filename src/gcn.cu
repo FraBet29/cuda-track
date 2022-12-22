@@ -203,7 +203,6 @@ __global__ void parallel_get_l2_penalty(float *l2, float *data, int N) {
 
 // reduce the likelihood of model overfitting by using l2 regularization
 float GCN::get_l2_penalty() {
-
     float l2 = 0;
     float *cuda_l2;
     check_call(cudaMalloc(&cuda_l2, sizeof(float)));
@@ -232,7 +231,6 @@ float GCN::get_l2_penalty() {
 std::pair<float, float> GCN::train_epoch() {
 
     // Data transfer from host to device
-    // WE ASSUME THAT ALL DATA FIT INTO GLOBAL MEMORY (16GB)
     set_cuda_input(); // set the input data
 
     set_cuda_truth(1); // get the true labels for the dataset with split == 1 (train)
