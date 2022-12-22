@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
         cudaSetDevice(gpu_id);
         int id;
         cudaGetDevice(&id);
-        cudaMemGetInfo(&free);
+        cudaMemGetInfo(&free, &total);
         std::cout << "GPU " << id << " memory: free = " << free << std::endl;
     }
 
