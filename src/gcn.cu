@@ -1,5 +1,4 @@
 #include "../include/gcn.h"
-#include "../include/rand.h"
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
 #include <cstdio>
