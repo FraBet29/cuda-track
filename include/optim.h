@@ -10,7 +10,7 @@ struct AdamParams {
 };
 
 struct CudaAdamVariable {
-    float *data = nullptr, *grad = nullptr, *m = nullptr, *v = nullptr;
+    float *data, *grad, *m, *v;
     bool decay;
     int size;
     CudaAdamVariable(CudaVariable*, bool);
