@@ -19,8 +19,8 @@ CudaAdamVariable::CudaAdamVariable(CudaVariable *var, bool decay):
     }
 
 CudaAdamVariable::~CudaAdamVariable() {
-    check_call(cudaFree(m));
-    check_call(cudaFree(v));
+    if(m) check_call(cudaFree(m));
+    if(v) check_call(cudaFree(v));
 }
 
 Adam::Adam(std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params) {
