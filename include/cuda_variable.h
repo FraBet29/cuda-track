@@ -4,6 +4,7 @@ struct CudaVariable {
     float *data, *grad = nullptr;
     int size;
     //float *local_grad;
+    CudaVariable() {};
     CudaVariable(int size, bool requires_grad=true, bool thread_local_grad=false);
     ~CudaVariable();
     void glorot(int in_size, int out_size);
