@@ -8,9 +8,9 @@ HFILES=include/gcn.h include/optim.h include/module.h include/sparse.h include/p
 
 all: gcn-seq
 
-gcn-seq: src/main.cpp $(CXXFILES) $(HFILES)
+gcn-seq: src/main.cu $(CXXFILES) $(HFILES)
 	mkdir exec
-	$(CXX) $(CXXFLAGS) -o exec/gcn-seq $(CXXFILES) src/main.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o exec/gcn-seq $(CXXFILES) src/main.cu $(LDFLAGS)
 
 clean:
 	rm exec/*
