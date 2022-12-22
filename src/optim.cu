@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "../include/cuda_check.h"
 
-#define MAX_NUM_THREADS 1024
+#define MAX_THREADS_PER_BLOCK_1D 1024
 
 AdamParams AdamParams::get_default() {
     return {0.001, 0.9, 0.999, 1e-8, 0.0};
@@ -47,8 +47,8 @@ void Adam::step() {
     float step_size = params.lr * sqrtf(1 - powf(params.beta2, step_count)) / (1 - powf(params.beta1, step_count));
     for (auto &var: cuda_vars) {
         // GPU blocks and threads settings
-        dim3 blocksPerGrid((var.size + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS, 1, 1);
-        dim3 threadsPerBlock(MAX_NUM_THREADS, 1, 1);
+        dim3 blocksPerGrid((var.size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
+        dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
         adam_step_parallel<<<blocksPerGrid, threadsPerBlock>>>(var.data, var.grad, var.m, var.v, var.decay, step_size, params.weight_decay, params.beta1, params.beta2, params.eps, var.size);
         check_kernel_call();
     }

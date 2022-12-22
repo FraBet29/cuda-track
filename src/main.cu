@@ -25,25 +25,17 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    // Get gpu info
-    int nDevices;
-    cudaGetDeviceCount(&nDevices);
-  
-    std::cout << "Number of devices: " << nDevices << std::endl;
-  
-    for (int i = 0; i < nDevices; i++) {
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, i);
-        std::cout << "Device Number: " << i << std::endl;
-        std::cout << "  Device name: " << prop.name << std::endl;
-        std::cout << "  Global memory (GB): " << (float) prop.totalGlobalMem / 1.0e9 << std::endl;
-        std::cout << "  Shared memory per block (KB) " << (float) prop.sharedMemPerBlock / 1.0e3 << std::endl;
-        std::cout << "  Warp-size: " << prop.warpSize << std::endl;
-        std::cout << "  Maximum number of threads per block: " << prop.maxThreadsPerBlock << std::endl;
-        std::cout << "  Memory Clock Rate (MHz): " << prop.memoryClockRate / 1.0e3 << std::endl;
-        std::cout << "  Memory Bus Width (bits): " << prop.memoryBusWidth << std::endl;
-        std::cout << "  Peak Memory Bandwidth (GB/s): " << 2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8.0) / 1.0e6 << std::endl;
-    }
+    // Get GPU info
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    std::cout << "  Device name: " << prop.name << std::endl;
+    std::cout << "  Global memory (GB): " << (float) prop.totalGlobalMem / 1.0e9 << std::endl;
+    std::cout << "  Shared memory per block (KB) " << (float) prop.sharedMemPerBlock / 1.0e3 << std::endl;
+    std::cout << "  Warp-size: " << prop.warpSize << std::endl;
+    std::cout << "  Maximum number of threads per block: " << prop.maxThreadsPerBlock << std::endl;
+    std::cout << "  Memory Clock Rate (MHz): " << prop.memoryClockRate / 1.0e3 << std::endl;
+    std::cout << "  Memory Bus Width (bits): " << prop.memoryBusWidth << std::endl;
+    std::cout << "  Peak Memory Bandwidth (GB/s): " << 2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8.0) / 1.0e6 << std::endl;
 
     GCN gcn(params, &data); // Create and initialize and object of type GCN.
     gcn.run(); // Run the main function of the model in order to train and validate the solution.
