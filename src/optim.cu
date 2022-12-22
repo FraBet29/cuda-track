@@ -27,10 +27,15 @@ CudaAdamVariable::~CudaAdamVariable() {
 }
 
 Adam::Adam(std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams params) {
+    std::cout << "Initializing Adam" << std::endl;
     step_count = 0;
     this->params = params;
-    for (auto v: cuda_vars)
+    for (auto v: cuda_vars) {
+        std::cout << "ok 3" << std::endl;
         this->cuda_vars.emplace_back(v.first, v.second);
+        std::cout << "ok 4" << std::endl;
+    }
+    std::cout << "ok 5" << std::endl;
 }
 
 __global__ void adam_step_parallel(float *data, float *grad, float *m, float *v, bool decay, float step_size, float weight_decay, float beta1, float beta2, float eps, int N) {
