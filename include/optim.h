@@ -13,6 +13,7 @@ struct CudaAdamVariable {
     float *data, *grad, *m, *v;
     bool decay;
     int size;
+    CudaAdamVariable() {};
     CudaAdamVariable(CudaVariable *var, bool decay);
     ~CudaAdamVariable();
 };

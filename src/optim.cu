@@ -30,7 +30,7 @@ Adam::Adam(std::vector<std::pair<CudaVariable*, bool>> cuda_vars, AdamParams par
     std::cout << "Initializing Adam" << std::endl;
     step_count = 0;
     this->params = params;
-    this->cuda_vars.resize(cuda_vars.size(), CudaAdamVariable::CudaAdamVariable(nullptr, false));
+    this->cuda_vars.resize(cuda_vars.size());
     for (auto v: cuda_vars) {
         std::cout << "ok 3" << std::endl;
         this->cuda_vars.emplace_back(v.first, v.second);
