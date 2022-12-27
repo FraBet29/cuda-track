@@ -18,11 +18,11 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < m && j < p) {
-        __shared__ float a_tile[TILE_SIZE * n], b_tile[TILE_SIZE * n];
+        extern __shared__ float a_tile[TILE_SIZE * n], b_tile[TILE_SIZE * n];
         float sum = 0.0f;
         for (int k = 0; threadId.x + k < n; k += TILE_SIZE) {
-            a_tile[threadId.y * n + threadId.x + k] = a[i * n + threadId.x + k];
-            b_tile[(threadId.y + k) * p + threadId.x] = b[(threadId.y + k) * p + j];
+            a_tile[threadIdx.y * n + threadIdx.x + k] = a[i * n + threadIdx.x + k];
+            b_tile[(threadIdx.y + k) * p + threadIdx.x] = b[(threadIdx.y + k) * p + j];
         }
         __syncthreads();
         for (int k = 0; k < n; ++k)
@@ -38,7 +38,10 @@ void Matmul::forward(bool training) {
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D tiles
     // Launch kernel
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p, MAX_THREADS_PER_BLOCK_2D);
+    int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * n;
+    if (sharedMemorySize * sizeof(float) > SHARED_MEMORY_PER_BLOCK)
+        std::cerr << "The size of the data exceeds the size of available shared memory per block." << std::endl;
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize * sizeof(float)>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p, MAX_THREADS_PER_BLOCK_2D);
     check_kernel_call();
     cudaDeviceSynchronize();
    /*
