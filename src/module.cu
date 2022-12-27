@@ -15,13 +15,6 @@ Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c,
 
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
-    int i = threadIdx.y + blockIdx.y * blockDim.y;
-    int k = threadIdx.x + blockIdx.x * blockDim.x;
-    if (i < m && k < p) {
-        for (int j = 0; j < n; ++j)
-            c[i * p + k] += a[i * n + j] * b[j * p + k];
-    }
-    /*
     extern __shared__ float tile[];
     int i = threadIdx.y + blockIdx.y * blockDim.y;
     int j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -39,7 +32,6 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
             sum += a_tile[threadIdx.y * n + k] * b_tile[k * TILE_SIZE + threadIdx.x];
         c[i * p + j] = sum;
     }
-    */
 }
 
 void Matmul::forward(bool training) {
@@ -52,8 +44,7 @@ void Matmul::forward(bool training) {
     int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * n;
     if (sharedMemorySize * sizeof(float) > SHARED_MEMORY_PER_BLOCK)
         std::cerr << "The size of the data exceeds the size of available shared memory per block." << std::endl;
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
-    //matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize * sizeof(float)>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize * sizeof(float)>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
    /*
