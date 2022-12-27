@@ -15,11 +15,11 @@ Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c,
 
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p, int TILE_SIZE) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
-    __shared__ float a_tile[TILE_SIZE * n], b_tile[TILE_SIZE * n];
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
-    float sum = 0.0f;
     if (i < m && j < p) {
+        __shared__ float a_tile[TILE_SIZE * n], b_tile[TILE_SIZE * n];
+        float sum = 0.0f;
         for (int k = 0; threadId.x + k < n; k += TILE_SIZE) {
             a_tile[threadId.y * n + threadId.x + k] = a[i * n + threadId.x + k];
             b_tile[(threadId.y + k) * p + threadId.x] = b[(threadId.y + k) * p + j];
@@ -27,8 +27,8 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
         __syncthreads();
         for (int k = 0; k < n; ++k)
             sum += a_tile[i * n + k] * b_tile[k * p + j];
+        c[i * p + j] = sum;
     }
-    c[i * p + j] = sum;
 }
 
 void Matmul::forward(bool training) {
