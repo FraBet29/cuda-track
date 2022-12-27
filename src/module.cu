@@ -27,12 +27,9 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
         for (int k = 0; threadIdx.y + k < n; k += TILE_SIZE)
             b_tile[(threadIdx.y + k) * p + threadIdx.x] = b[(threadIdx.y + k) * p + j];
         __syncthreads();
-        /*
         for (int k = 0; k < n; ++k)
-            sum += a_tile[i * n + k] * b_tile[k * p + j];
+            sum += a_tile[threadIdx.y * n + k] * b_tile[k * p + threadIdx.x];
         c[i * p + j] = sum;
-        */
-       c[i * p + j] = 0.0f;
     }
 }
 
