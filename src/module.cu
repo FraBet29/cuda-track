@@ -15,10 +15,12 @@ Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c,
 
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p, int TILE_SIZE) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
-    extern __shared__ float a_tile[], b_tile[];
+    extern __shared__ float tile[];
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < m && j < p) {
+        float *a_tile = &tile[0];
+        float *b_tile = &tile[TILE_SIZE * n];
         float sum = 0.0f;
         for (int k = 0; threadIdx.x + k < n; k += TILE_SIZE) {
             a_tile[threadIdx.y * n + threadIdx.x + k] = a[i * n + threadIdx.x + k];
