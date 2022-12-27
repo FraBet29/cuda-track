@@ -17,7 +17,7 @@ class Matmul: public Module {
     int m, n, p;
 public:
     Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p);
-    ~Matmul() { std::cout << "Deallocating Matmul." << std::endl; };
+    ~Matmul() {};
     void forward(bool);
     void backward();
 };
@@ -28,7 +28,7 @@ class SparseMatmul: public Module {
     int m, n, p;
 public:
     SparseMatmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, SparseIndex *sp, int m, int n, int p);
-    ~SparseMatmul() { std::cout << "Deallocating SparseMatmul." << std::endl; }
+    ~SparseMatmul() {};
     void forward(bool);
     void backward();
 };
@@ -39,7 +39,7 @@ class GraphSum: public Module {
     int dim;
 public:
     GraphSum(CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *graph, int dim);
-    ~GraphSum() { std::cout << "Deallocating GraphSum." << std::endl; }
+    ~GraphSum() {};
     void forward(bool);
     void backward();
 };
@@ -52,7 +52,7 @@ class CrossEntropyLoss: public Module {
     int num_classes;
 public:
     CrossEntropyLoss(CudaVariable *cuda_logits, int *cuda_truth, float *loss, float *cuda_loss, int num_classes);
-    ~CrossEntropyLoss() { std::cout << "Deallocating CrossEntropyLoss." << std::endl; };
+    ~CrossEntropyLoss() {};
     void forward(bool);
     void backward();
 };

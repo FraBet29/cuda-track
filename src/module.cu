@@ -14,55 +14,26 @@ Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c,
         cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
-    
     // Multiplication of matrices A and B; the result is stored in the matrix C
-    extern __shared__ float tile[];
-    
-    int TILE_SIZE = blockDim.x; // = blockDim.y
-    
-    float *a_tile = &tile[0]; // A tile
-    float *b_tile = &tile[TILE_SIZE * TILE_SIZE]; // B tile
-    
-    int i = threadIdx.y + blockIdx.y * blockDim.y; // global row
-    int j = threadIdx.x + blockIdx.x * blockDim.x; // global column
-    
-    float sum = 0.0f;
-    
-    for (int it = 0; it < (TILE_SIZE + n - 1) / TILE_SIZE; ++it) {
-
-        if (it * TILE_SIZE + threadIdx.x < n && i < m)
-            a_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = a[i * n + it * TILE_SIZE + threadIdx.x];
-        else
-            a_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = 0.0f;
-
-        if (it * TILE_SIZE + threadIdx.y < n && j < p)
-            b_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = b[(it * TILE_SIZE + threadIdx.y) * p + j];
-        else
-            b_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = 0.0f;
-
-        __syncthreads();
-
-        for (int k = 0; k < TILE_SIZE; ++k)
-            sum += a_tile[threadIdx.y * TILE_SIZE + k] * b_tile[k * TILE_SIZE + threadIdx.x];
-
-        __syncthreads();
-    }
-    
-    if (i < m && j < p) {
-        c[i * p + j] = sum;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int k = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < m && k < p) {
+        float sum = 0.0f;
+        for (int j = 0; j < n; ++j)
+            sum += a[i * n + j] * b[j * p + k];
+        c[i * p + k] = sum;
     }
 }
 
 void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
-    cuda_c->zero();
+    //cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
-    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D tiles
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
-    int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * MAX_THREADS_PER_BLOCK_2D * sizeof(float);
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
-    check_kernel_call();
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
+    //check_kernel_call();
     cudaDeviceSynchronize();
    /*
     c->zero();
@@ -79,7 +50,7 @@ __global__ void matmul_backward_parallel(float *a_data, float *b_data, float *a_
     int i = threadIdx.y + blockIdx.y * blockDim.y;
     int j = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < m && j < n) {
-        float tmp = 0;
+        float tmp = 0.0f;
         for (int k = 0; k < p; k++) {
             tmp += c_grad[i * p + k] * b_data[j * p + k];
             atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[i * n + j]); // TRY TO AVOID ATOMIC ADD
@@ -97,7 +68,7 @@ void Matmul::backward() {
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     matmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_a->grad, cuda_b->grad, cuda_c->grad, m, n, p);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
    /*
     a->zero_grad();
@@ -131,22 +102,24 @@ __global__ void sparsematmul_forward_parallel(float *a, float *b, float *c, int 
     int i = threadIdx.y + blockIdx.y * blockDim.y;
     int k = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N && k < p) {
+        float sum = 0.0f;
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            c[i * p + k] += a[jj] * b[j * p + k];
+            sum += a[jj] * b[j * p + k];
         }
+        c[i * p + k] = sum;
     }        
 }
 
 void SparseMatmul::forward(bool training) {
     timer_start(TMR_SPMATMUL_FW);
-    cuda_c->zero();
+    //cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     sparsematmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, cuda_sp->indptr, cuda_sp->indices, cuda_sp->indptr_size - 1, p);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     c->zero();
@@ -179,7 +152,7 @@ void SparseMatmul::backward() {
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     sparsematmul_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->grad, cuda_c->grad, cuda_sp->indptr, cuda_sp->indices, cuda_sp->indptr_size - 1, p);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     b->zero_grad();
@@ -208,26 +181,28 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
     int src = threadIdx.y + blockIdx.y * blockDim.y;
     int j = threadIdx.x + blockIdx.x * blockDim.x;
     if (src < N && j < dim) {
+        float sum = 0.0f;
         for (int i = indptr[src]; i < indptr[src + 1]; i++) {
             int dst = indices[i];
             float coef = 1.0 / sqrtf(
                     (indptr[src + 1] - indptr[src]) * (indptr[dst + 1] - indptr[dst])
             );
             // This only works for undirected graphs. Should be out[dst] += coef * in[src]
-            out[src * dim + j] += coef * in[dst * dim + j];
+            sum += coef * in[dst * dim + j];
         }
+        out[src * dim + j] = sum;
     }        
 }
 
 void GraphSum::forward(bool training) {
     timer_start(TMR_GRAPHSUM_FW);
-    cuda_out->zero();
+    //cuda_out->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((dim + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (cuda_graph->indptr_size - 1 + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // Launch kernel
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_out->data, cuda_graph->indptr, cuda_graph->indices, cuda_graph->indptr_size - 1, dim);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     out->zero();
@@ -254,7 +229,7 @@ void GraphSum::backward() {
     // Launch kernel
     // SAME EXACT CODE STRUCTURE AS GRAPHSUM FORWARD, BUT WITH GRADIENTS AND WITH IN AND OUT SWAPPED!
     graphsum_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_out->grad, cuda_in->grad, cuda_graph->indptr, cuda_graph->indices, cuda_graph->indptr_size - 1, dim);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     in->zero_grad();
@@ -335,16 +310,16 @@ void CrossEntropyLoss::forward(bool training) {
     dim3 blocksPerGrid1((cuda_logits->size / num_classes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     crossentropyloss_forward_parallel1<<<blocksPerGrid1, threadsPerBlock>>>(training, cuda_truth, cuda_logits->data, cuda_logits->grad, cuda_total_loss, cuda_count, cuda_logits->size, num_classes);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     crossentropyloss_forward_parallel2<<<1, 1>>>(cuda_loss, cuda_total_loss, cuda_count);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&(*loss), cuda_loss, sizeof(float), cudaMemcpyDeviceToHost));
     if (training) {
         dim3 blocksPerGrid3((cuda_logits->size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
         crossentropyloss_forward_parallel3<<<blocksPerGrid3, threadsPerBlock>>>(cuda_logits->grad, cuda_count, cuda_logits->size);
-        check_kernel_call();
+        //check_kernel_call();
         cudaDeviceSynchronize();
     }
     check_call(cudaFree(cuda_total_loss));
@@ -396,7 +371,6 @@ ReLU::ReLU(CudaVariable *cuda_in) {
 }
 
 ReLU::~ReLU() {
-    std::cout << "Deallocating ReLU." << std::endl;
     check_call(cudaFree(cuda_mask));
 }
 
@@ -416,7 +390,7 @@ void ReLU::forward(bool training) {
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
     relu_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, cuda_in->size, training);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     for (int i = 0; i < in->data.size(); i++) {
@@ -441,7 +415,7 @@ void ReLU::backward() {
     dim3 blocksPerGrid((cuda_in->size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     relu_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, cuda_in->size);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     for (int i = 0; i < in->data.size(); i++)
@@ -469,12 +443,11 @@ Dropout::Dropout(CudaVariable *cuda_in, float p) {
     // Initialize CUDA random
     check_call(cudaMalloc(&cuda_rand_state, cuda_in->size * sizeof(curandState)));
     rand_setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(cuda_rand_state, cuda_in->size);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
 }
 
 Dropout::~Dropout() {
-    std::cout << "Deallocating Dropout." << std::endl;
     if (cuda_mask) check_call(cudaFree(cuda_mask));
 }
 
@@ -499,7 +472,7 @@ void Dropout::forward(bool training) {
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
     dropout_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->data, cuda_mask, cuda_in->size, threshold, scale, cuda_rand_state, MY_RAND_MAX);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     for (int i = 0; i < in->data.size(); i++) {
@@ -527,7 +500,7 @@ void Dropout::backward() {
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     // Launch kernel
     dropout_backward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_in->grad, cuda_mask, cuda_in->size, scale);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     /*
     for (int i = 0; i < in->data.size(); i++)
