@@ -49,7 +49,7 @@ void Adam::step() {
         dim3 blocksPerGrid((var.size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
         dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
         adam_step_parallel<<<blocksPerGrid, threadsPerBlock>>>(var.data, var.grad, var.m, var.v, var.decay, step_size, params.weight_decay, params.beta1, params.beta2, params.eps, var.size);
-        check_kernel_call();
+        //check_kernel_call();
     }
     cudaDeviceSynchronize();
     /*

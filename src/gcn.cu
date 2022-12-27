@@ -169,7 +169,7 @@ float GCN::get_accuracy() {
     dim3 blocksPerGrid((params.num_nodes + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     parallel_get_accuracy<<<blocksPerGrid, threadsPerBlock>>>(cuda_wrong, cuda_total, cuda_truth, cuda_output->data, params.num_nodes, params.output_dim);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&wrong, cuda_wrong, sizeof(int), cudaMemcpyDeviceToHost));
     check_call(cudaMemcpy(&total, cuda_total, sizeof(int), cudaMemcpyDeviceToHost));
@@ -209,7 +209,7 @@ float GCN::get_l2_penalty() {
     dim3 blocksPerGrid((cuda_variables[2].size + MAX_THREADS_PER_BLOCK_1D - 1) / MAX_THREADS_PER_BLOCK_1D, 1, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_1D, 1, 1);
     parallel_get_l2_penalty<<<blocksPerGrid, threadsPerBlock>>>(cuda_l2, cuda_variables[2].data, cuda_variables[2].size);
-    check_kernel_call();
+    //check_kernel_call();
     cudaDeviceSynchronize();
     check_call(cudaMemcpy(&l2, cuda_l2, sizeof(float), cudaMemcpyDeviceToHost));
     check_call(cudaFree(cuda_l2));
