@@ -14,22 +14,41 @@ Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c,
         cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
+    
     // Multiplication of matrices A and B; the result is stored in the matrix C
     extern __shared__ float tile[];
-    int i = threadIdx.y + blockIdx.y * blockDim.y;
-    int j = threadIdx.x + blockIdx.x * blockDim.x;
+    
     int TILE_SIZE = blockDim.x; // = blockDim.y
-    if (i < m && j < p) {
-        float *a_tile = &tile[0];
-        float *b_tile = &tile[TILE_SIZE * n];
-        float sum = 0.0f;
-        for (int k = 0; threadIdx.x + k < n; k += TILE_SIZE)
-            a_tile[threadIdx.y * n + threadIdx.x + k] = a[i * n + threadIdx.x + k];
-        for (int k = 0; threadIdx.y + k < n; k += TILE_SIZE)
-            b_tile[(threadIdx.y + k) * TILE_SIZE + threadIdx.x] = b[(threadIdx.y + k) * p + j];
+    
+    float *a_tile = &tile[0]; // A tile
+    float *b_tile = &tile[TILE_SIZE * TILE_SIZE]; // B tile
+    
+    int i = threadIdx.y + blockIdx.y * blockDim.y; // global row
+    int j = threadIdx.x + blockIdx.x * blockDim.x; // global column
+    
+    float sum = 0.0f;
+    
+    for (int it = 0; it < (TILE_SIZE + n - 1) / TILE_SIZE; ++it) {
+
+        if (it * TILE_SIZE + threadIdx.x < n && i < m)
+            a_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = a[i * n + it * TILE_SIZE + threadIdx.x];
+        else
+            a_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = 0.0f;
+
+        if (it * TILE_SIZE + threadIdx.y < n && j < p)
+            b_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = b[(it * TILE_SIZE + threadIdx.y) * p + j];
+        else
+            b_tile[threadIdx.y * TILE_SIZE + threadIdx.x] = 0.0f;
+
         __syncthreads();
-        for (int k = 0; k < n; ++k)
-            sum += a_tile[threadIdx.y * n + k] * b_tile[k * TILE_SIZE + threadIdx.x];
+
+        for (int k = 0; k < TILE_SIZE; ++k)
+            sum += a_tile[threadIdx.y * TILE_SIZE + k] * b_tile[k * TILE_SIZE + threadIdx.x];
+
+        __syncthreads();
+    }
+    
+    if (i < m && j < p) {
         c[i * p + j] = sum;
     }
 }
@@ -41,10 +60,8 @@ void Matmul::forward(bool training) {
     dim3 blocksPerGrid((p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D tiles
     // Launch kernel
-    int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * n;
-    if (sharedMemorySize * sizeof(float) > SHARED_MEMORY_PER_BLOCK)
-        std::cerr << "The size of the data exceeds the size of available shared memory per block." << std::endl;
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize * sizeof(float)>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
+    int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * MAX_THREADS_PER_BLOCK_2D * sizeof(float);
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
    /*
