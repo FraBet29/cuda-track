@@ -18,9 +18,10 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if (i < m && j < p) {
-        extern __shared__ float a_tile[TILE_SIZE * n], b_tile[TILE_SIZE * n];
+        extern __shared__ float a_tile[TILE_SIZE * n];
+        extern __shared__ float b_tile[TILE_SIZE * n];
         float sum = 0.0f;
-        for (int k = 0; threadId.x + k < n; k += TILE_SIZE) {
+        for (int k = 0; threadIdx.x + k < n; k += TILE_SIZE) {
             a_tile[threadIdx.y * n + threadIdx.x + k] = a[i * n + threadIdx.x + k];
             b_tile[(threadIdx.y + k) * p + threadIdx.x] = b[(threadIdx.y + k) * p + j];
         }
