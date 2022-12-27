@@ -13,14 +13,22 @@
 Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p) : 
         cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
-__global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
+__global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p, int TILE_SIZE) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
+    __shared__ float a_tile[TILE_SIZE * n], b_tile[TILE_SIZE * n];
     int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int k = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i < m && k < p) {
-        for (int j = 0; j < n; ++j)
-            c[i * p + k] += a[i * n + j] * b[j * p + k];
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    float sum = 0.0f;
+    if (i < m && j < p) {
+        for (int k = 0; threadId.x + k < n; k += TILE_SIZE) {
+            a_tile[threadId.y * n + threadId.x + k] = a[i * n + threadId.x + k];
+            b_tile[(threadId.y + k) * p + threadId.x] = b[(threadId.y + k) * p + j];
+        }
+        __syncthreads();
+        for (int k = 0; k < n; ++k)
+            sum += a_tile[i * n + k] * b_tile[k * p + j];
     }
+    c[i * p + j] = sum;
 }
 
 void Matmul::forward(bool training) {
@@ -28,9 +36,9 @@ void Matmul::forward(bool training) {
     cuda_c->zero();
     // GPU blocks and threads settings
     dim3 blocksPerGrid((m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
-    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D squared blocks
+    dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1); // 2D tiles
     // Launch kernel
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p, MAX_THREADS_PER_BLOCK_2D);
     check_kernel_call();
     cudaDeviceSynchronize();
    /*
