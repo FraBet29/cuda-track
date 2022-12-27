@@ -2,8 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 #include "../include/cuda_check.h"
-
-#define MAX_THREADS_PER_BLOCK_1D 1024
+#include "../include/gpu_params.h"
 
 AdamParams AdamParams::get_default() {
     return {0.001, 0.9, 0.999, 1e-8, 0.0};

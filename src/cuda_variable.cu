@@ -1,11 +1,10 @@
 #include "../include/cuda_variable.h"
 #include "../include/cuda_check.h"
 #include "../include/cuda_rand.h"
+#include "../include/gpu_params.h"
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
-
-#define MAX_THREADS_PER_BLOCK_1D 1024
 
 CudaVariable::CudaVariable(int size, bool requires_grad, bool thread_local_grad): size(size) {
     check_call(cudaMalloc(&data, size * sizeof(float)));

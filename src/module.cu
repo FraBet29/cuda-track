@@ -2,11 +2,9 @@
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
 #include "../include/cuda_rand.h"
+#include "../include/gpu_params.h"
 #include <cmath>
 #include <iostream>
-
-#define MAX_THREADS_PER_BLOCK_1D 1024
-#define MAX_THREADS_PER_BLOCK_2D 32
 
 // ################################################################################################################
 /**

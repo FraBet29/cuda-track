@@ -1,10 +1,9 @@
 #include "../include/gcn.h"
 #include "../include/timer.h"
 #include "../include/cuda_check.h"
+#include "../include/gpu_params.h"
 #include <cstdio>
 #include <tuple>
-
-#define MAX_THREADS_PER_BLOCK_1D 1024
 
 /**
  * Returns the default paramets of the model
