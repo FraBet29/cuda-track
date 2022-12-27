@@ -13,11 +13,19 @@
 Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c, int m, int n, int p) : 
         cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
-__global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p, int TILE_SIZE) {
+__global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
     // Multiplication of matrices A and B; the result is stored in the matrix C
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int k = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < m && k < p) {
+        for (int j = 0; j < n; ++j)
+            c[i * p + k] += a[i * n + j] * b[j * p + k];
+    }
+    /*
     extern __shared__ float tile[];
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
+    int TILE_SIZE = blockDim.x; // = blockDim.y
     if (i < m && j < p) {
         float *a_tile = &tile[0];
         float *b_tile = &tile[TILE_SIZE * n];
@@ -25,13 +33,13 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
         for (int k = 0; threadIdx.x + k < n; k += TILE_SIZE)
             a_tile[threadIdx.y * n + threadIdx.x + k] = a[i * n + threadIdx.x + k];
         for (int k = 0; threadIdx.y + k < n; k += TILE_SIZE)
-            b_tile[(threadIdx.y + k) * p + threadIdx.x] = b[(threadIdx.y + k) * p + j];
+            b_tile[(threadIdx.y + k) * TILE_SIZE + threadIdx.x] = b[(threadIdx.y + k) * p + j];
         __syncthreads();
         for (int k = 0; k < n; ++k)
-            sum += a_tile[threadIdx.y * n + k] * b_tile[k * p + threadIdx.x];
-        __syncthreads();
+            sum += a_tile[threadIdx.y * n + k] * b_tile[k * TILE_SIZE + threadIdx.x];
         c[i * p + j] = sum;
     }
+    */
 }
 
 void Matmul::forward(bool training) {
@@ -44,7 +52,8 @@ void Matmul::forward(bool training) {
     int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * n;
     if (sharedMemorySize * sizeof(float) > SHARED_MEMORY_PER_BLOCK)
         std::cerr << "The size of the data exceeds the size of available shared memory per block." << std::endl;
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize * sizeof(float)>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p, MAX_THREADS_PER_BLOCK_2D);
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
+    //matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize * sizeof(float)>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
     check_kernel_call();
     cudaDeviceSynchronize();
    /*
@@ -59,8 +68,8 @@ void Matmul::forward(bool training) {
 }
 
 __global__ void matmul_backward_parallel(float *a_data, float *b_data, float *a_grad, float *b_grad, float *c_grad, int m, int n, int p) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < m && j < n) {
         float tmp = 0;
         for (int k = 0; k < p; k++) {
@@ -111,8 +120,8 @@ SparseMatmul::SparseMatmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVaria
         }
 
 __global__ void sparsematmul_forward_parallel(float *a, float *b, float *c, int *indptr, int *indices, int N, int p) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int k = threadIdx.y + blockIdx.y * blockDim.y;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int k = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N && k < p) {
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
@@ -144,8 +153,8 @@ void SparseMatmul::forward(bool training) {
 }
 
 __global__ void sparsematmul_backward_parallel(float *a_data, float *b_grad, float *c_grad, int *indptr, int *indices, int N, int p) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int k = threadIdx.y + blockIdx.y * blockDim.y;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int k = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < N && k < p) {
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
@@ -188,8 +197,8 @@ GraphSum::GraphSum(CudaVariable *cuda_in, CudaVariable *cuda_out, SparseIndex *g
         }
 
 __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, int *indices, int N, int dim) {
-    int src = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    int src = threadIdx.y + blockIdx.y * blockDim.y;
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
     if (src < N && j < dim) {
         for (int i = indptr[src]; i < indptr[src + 1]; i++) {
             int dst = indices[i];
