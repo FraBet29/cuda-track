@@ -2,6 +2,10 @@
 #include <iostream>
 #include <cmath>
 
+int SHARED_MEMORY_PER_BLOCK;
+int MAX_THREADS_PER_BLOCK_1D;
+int MAX_THREADS_PER_BLOCK_2D;
+
 void set_gpu_params() {
     // Get GPU info
     cudaDeviceProp prop;
@@ -16,7 +20,7 @@ void set_gpu_params() {
     std::cout << "  Memory Bus Width (bits): " << prop.memoryBusWidth << std::endl;
     std::cout << "  Peak Memory Bandwidth (GB/s): " << 2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8.0) / 1.0e6 << std::endl;
     // Set global variables
-    int SHARED_MEMORY_PER_BLOCK = prop.sharedMemPerBlock;
-    int MAX_THREADS_PER_BLOCK_1D = prop.maxThreadsPerBlock;
-    int MAX_THREADS_PER_BLOCK_2D = std::floor(std::sqrt(MAX_THREADS_PER_BLOCK_1D));
+    SHARED_MEMORY_PER_BLOCK = prop.sharedMemPerBlock;
+    MAX_THREADS_PER_BLOCK_1D = prop.maxThreadsPerBlock;
+    MAX_THREADS_PER_BLOCK_2D = std::floor(std::sqrt(MAX_THREADS_PER_BLOCK_1D));
 }
