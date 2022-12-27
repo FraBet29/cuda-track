@@ -1,4 +1,4 @@
-#include "gpu_params.h"
+#include "../include/gpu_params.h"
 #include <iostream>
 #include <cmath>
 
