@@ -1,6 +1,5 @@
 #include "../include/gpu_params.h"
 #include <iostream>
-#include <cmath>
 
 int SHARED_MEMORY_PER_BLOCK;
 int MAX_THREADS_PER_BLOCK_1D;
@@ -22,5 +21,5 @@ void set_gpu_params() {
     // Set global variables
     SHARED_MEMORY_PER_BLOCK = prop.sharedMemPerBlock;
     MAX_THREADS_PER_BLOCK_1D = prop.maxThreadsPerBlock;
-    MAX_THREADS_PER_BLOCK_2D = std::floor(std::sqrt(MAX_THREADS_PER_BLOCK_1D));
+    MAX_THREADS_PER_BLOCK_2D = 32;
 }
