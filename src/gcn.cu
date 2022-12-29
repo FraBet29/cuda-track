@@ -24,7 +24,7 @@ GCNParams GCNParams::get_default() {
     
     */
 
-    /*
+    ///*
     return { // CORA
         2708,   // num_nodes
         1433,   // input_dim
@@ -35,9 +35,9 @@ GCNParams GCNParams::get_default() {
         5e-4,   // weight_decay
         100,    // epochs
         0};     // early_stopping
-    */
+    //*/
 
-    ///*
+    /*
     return { // PUBMED
         19717,   // num_nodes
         500,   // input_dim
@@ -48,7 +48,7 @@ GCNParams GCNParams::get_default() {
         5e-4,   // weight_decay
         100,    // epochs
         0};     // early_stopping
-    //*/
+    */
 
     /*
     return { // REDDIT
