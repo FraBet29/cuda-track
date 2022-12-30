@@ -153,7 +153,7 @@ __global__ void sparsematmul_forward_parallel(float *a, float *b, float *c, int 
         float sum = 0.0f;
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            sum += a[jj] * b[j * p + k]; // REDUNDANT ACCESS TO GLOBAL MEMORY, UNCOALESCED ACCESS FOR B
+            sum += a[jj] * b[j * p + k];
         }
         c[i * p + k] = sum;
     }        
@@ -185,7 +185,7 @@ __global__ void sparsematmul_backward_parallel(float *a_data, float *b_grad, flo
     if (i < N && k < p) {
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[jj]); // UNCOALESCED ACCESS FOR GRAD B, GLOBAL SYNCHRONIZATION
+            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[jj]);
         }
     }
 }
@@ -232,7 +232,7 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
                     (indptr[src + 1] - indptr[src]) * (indptr[dst + 1] - indptr[dst])
             );
             // This only works for undirected graphs. Should be out[dst] += coef * in[src]
-            sum += coef * in[dst * dim + j]; // REDUNDANT ACCESS TO GLOBAL MEMORY
+            sum += coef * in[dst * dim + j];
         }
         out[src * dim + j] = sum;
     }        
