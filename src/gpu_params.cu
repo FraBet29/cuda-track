@@ -23,5 +23,5 @@ void set_gpu_params() {
     // Set global variables
     SHARED_MEMORY_PER_BLOCK = prop.sharedMemPerBlock;
     MAX_THREADS_PER_BLOCK_1D = prop.maxThreadsPerBlock;
-    MAX_THREADS_PER_BLOCK_2D = 32;
+    MAX_THREADS_PER_BLOCK_2D = 16;
 }
