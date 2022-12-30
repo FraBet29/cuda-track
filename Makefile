@@ -1,5 +1,6 @@
 CXX=nvcc
 CXXFLAGS=-O3
+#CXXFLAGS=-O3 --use_fast_math
 LDFLAGS=-lm -lstdc++
 
 CXXFILES=src/gcn.cu src/optim.cu src/module.cu src/parser.cpp src/timer.cpp src/cuda_check.cu src/cuda_rand.cu src/cuda_variable.cu src/cuda_sparse.cu src/gpu_params.cu

@@ -14,7 +14,7 @@ Matmul::Matmul(CudaVariable *cuda_a, CudaVariable *cuda_b, CudaVariable *cuda_c,
         cuda_a(cuda_a), cuda_b(cuda_b), cuda_c(cuda_c), m(m), n(n), p(p) {}
 
 // GLOBAL MEMORY VERSION
-/*
+///*
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
     int i = threadIdx.y + blockIdx.y * blockDim.y;
     int k = threadIdx.x + blockIdx.x * blockDim.x;
@@ -25,10 +25,10 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
         c[i * p + k] = sum;
     }
 }
-*/
+//*/
 
 // SHARED MEMORY VERSION
-///*
+/*
 __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int n, int p) {
 
     extern __shared__ float tile[];
@@ -67,7 +67,7 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
         c[i * p + j] = sum;
     }
 }
-//*/
+*/
 
 void Matmul::forward(bool training) {
     timer_start(TMR_MATMUL_FW);
@@ -75,14 +75,14 @@ void Matmul::forward(bool training) {
     dim3 blocksPerGrid((p + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, (m + MAX_THREADS_PER_BLOCK_2D - 1) / MAX_THREADS_PER_BLOCK_2D, 1);
     dim3 threadsPerBlock(MAX_THREADS_PER_BLOCK_2D, MAX_THREADS_PER_BLOCK_2D, 1);
     // GLOBAL MEMORY VERSION
-    /*
-    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
-    */
-    // SHARED MEMORY VERSION
     ///*
+    matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
+    //*/
+    // SHARED MEMORY VERSION
+    /*
     int sharedMemorySize = 2 * MAX_THREADS_PER_BLOCK_2D * MAX_THREADS_PER_BLOCK_2D * sizeof(float);
     matmul_forward_parallel<<<blocksPerGrid, threadsPerBlock, sharedMemorySize>>>(cuda_a->data, cuda_b->data, cuda_c->data, m, n, p);
-    //*/
+    */
     //check_kernel_call();
     cudaDeviceSynchronize();
    /*
