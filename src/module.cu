@@ -20,7 +20,7 @@ __global__ void matmul_forward_parallel(float *a, float *b, float *c, int m, int
     if (i < m && k < p) {
         float sum = 0.0f;
         for (int j = 0; j < n; ++j)
-            sum += a[i * n + j] * b[j * p + k];
+            sum += a[i * n + j] * b[j * p + k]; // REDUNTANT ACCESS TO GLOBAL MEMORY, UNCOALESCED ACCESS FOR B
         c[i * p + k] = sum;
     }
 }
@@ -52,8 +52,8 @@ __global__ void matmul_backward_parallel(float *a_data, float *b_data, float *a_
     if (i < m && j < n) {
         float tmp = 0.0f;
         for (int k = 0; k < p; k++) {
-            tmp += c_grad[i * p + k] * b_data[j * p + k];
-            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[i * n + j]); // TRY TO AVOID ATOMIC ADD
+            tmp += c_grad[i * p + k] * b_data[j * p + k]; // REDUNDANT ACCESS TO GLOBAL MEMORY
+            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[i * n + j]); // REDUNDANT ACCESS TO GLOBAL MEMORY, GLOBAL SYNCHRONIZATION
         }
 		a_grad[i * n + j] = tmp;
     }
@@ -105,7 +105,7 @@ __global__ void sparsematmul_forward_parallel(float *a, float *b, float *c, int 
         float sum = 0.0f;
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            sum += a[jj] * b[j * p + k];
+            sum += a[jj] * b[j * p + k]; // REDUNDANT ACCESS TO GLOBAL MEMORY, UNCOALESCED ACCESS FOR B
         }
         c[i * p + k] = sum;
     }        
@@ -139,7 +139,7 @@ __global__ void sparsematmul_backward_parallel(float *a_data, float *b_grad, flo
     if (i < N && k < p) {
         for (int jj = indptr[i]; jj < indptr[i + 1]; jj++) {
             int j = indices[jj];
-            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[jj]); // TRY TO AVOID ATOMIC ADD
+            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[jj]); // UNCOALESCED ACCESS FOR GRAD B, GLOBAL SYNCHRONIZATION
         }
     }
 }
@@ -188,7 +188,7 @@ __global__ void graphsum_forward_parallel(float *in, float *out, int *indptr, in
                     (indptr[src + 1] - indptr[src]) * (indptr[dst + 1] - indptr[dst])
             );
             // This only works for undirected graphs. Should be out[dst] += coef * in[src]
-            sum += coef * in[dst * dim + j];
+            sum += coef * in[dst * dim + j]; // REDUNDANT ACCESS TO GLOBAL MEMORY
         }
         out[src * dim + j] = sum;
     }        
