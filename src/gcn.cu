@@ -270,13 +270,13 @@ void GCN::run() {
         float train_loss, train_acc, val_loss, val_acc;
         timer_start(TMR_TRAIN); // just for timing purposes
         std::tie(train_loss, train_acc) = train_epoch(); // train the epoch and record the current train_loss and train_accuracy
-        std::tie(val_loss, val_acc) = eval(2); //eval the model at the current step in order to obtain the val_loss and val_accuracy
+        std::tie(val_loss, val_acc) = eval(2); // eval the model at the current step in order to obtain the val_loss and val_accuracy
         printf("epoch=%d train_loss=%.5f train_acc=%.5f val_loss=%.5f val_acc=%.5f time=%.5f\n",
             epoch, train_loss, train_acc, val_loss, val_acc, timer_stop(TMR_TRAIN));
 
         loss_history.push_back(val_loss); // record the validation loss in order to apply an early stopping mechanism
 
-        //early stopping mechanism
+        // early stopping mechanism
         if(params.early_stopping > 0 && epoch >= params.early_stopping) {
             float recent_loss = 0.0;
             for(int i = epoch - params.early_stopping; i < epoch; i++)
