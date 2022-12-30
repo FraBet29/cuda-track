@@ -53,7 +53,8 @@ __global__ void matmul_backward_parallel(float *a_data, float *b_data, float *a_
         float tmp = 0.0f;
         for (int k = 0; k < p; k++) {
             tmp += c_grad[i * p + k] * b_data[j * p + k]; // REDUNDANT ACCESS TO GLOBAL MEMORY
-            atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[i * n + j]); // REDUNDANT ACCESS TO GLOBAL MEMORY, GLOBAL SYNCHRONIZATION
+            //atomicAdd(&b_grad[j * p + k], c_grad[i * p + k] * a_data[i * n + j]); // REDUNDANT ACCESS TO GLOBAL MEMORY, GLOBAL SYNCHRONIZATION
+            b_grad[j * p + k] += c_grad[i * p + k] * a_data[i * n + j];
         }
 		a_grad[i * n + j] = tmp;
     }
